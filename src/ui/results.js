@@ -1,6 +1,6 @@
-import { SCREEN_W, SCREEN_H } from '../core/config.js?v=8';
-import { text, px } from '../core/draw.js?v=8';
-import { bustFor } from '../art/characters.js?v=8';
+import { SCREEN_W, SCREEN_H } from '../core/config.js?v=9';
+import { text, px } from '../core/draw.js?v=9';
+import { bustFor } from '../art/characters.js?v=9';
 
 // The clock-out receipt, drawn into the same buffer as the room so it inherits
 // the pixel grid. Parchment, like the conversation box: the day ends the same
@@ -86,7 +86,8 @@ export function drawResults(g, state, reveal) {
 
   text(g, state.chosen.name.toUpperCase(), x + 72, y + 48, INK, 'left', 9);
   text(g, state.chosen.role, x + 72, y + 60, FAINT, 'left', 7);
-  text(g, state.floor || 'The office', x + 72, y + 72, GREEN, 'left', 7);
+  const seatLine = [state.floor, state.seat].filter(Boolean).join(' · ');
+  text(g, seatLine || 'The office', x + 72, y + 72, GREEN, 'left', 7);
 
   const rows = [
     ['CLOCKED IN', clock(r.inAt)],

@@ -1,6 +1,7 @@
-// The page's own clock: the device's real time, ticking in the header while you
-// walk the floor. Nothing here is simulated — the date, the seconds and the
-// 18:00 question all come from the same Date the player's computer keeps.
+// The page's own clock: the device's real time. Nothing here is simulated —
+// the date, the seconds and the 18:00 question all come from the same Date the
+// player's computer keeps. The clock itself is painted inside the picture by
+// ui/hud.js; this module only owns the time and the evening question.
 //
 // ?time=HH:MM pins the clock to a chosen hour (it still ticks forward from
 // there), which is how the evening question gets tested without waiting for
@@ -30,27 +31,18 @@ export const fmtDate = (d) => `${TWO(d.getDate())}/${TWO(d.getMonth() + 1)}/${d.
 export const weekday = (d) => WEEKDAYS[d.getDay()];
 export const isAfterHours = () => now().getHours() >= 18;
 
-let els = null;
 let armed = false;
 let fired = false;
 let out = false;
 let afterCb = () => {};
 
-// One interval for the whole page. The header is DOM, so four updates a second
-// is plenty and keeps layout off the render loop's budget.
+// One interval for the whole page. Nothing is written to the DOM from here any
+// more: the header is gone and the canvas clock reads now() at draw time.
 export function bind({ onAfterHours }) {
   afterCb = onAfterHours;
-  els = {
-    time: document.getElementById('wallTime'),
-    date: document.getElementById('wallDate'),
-    state: document.getElementById('clockState'),
-    label: document.getElementById('clockStateLabel')
-  };
 
   const tick = () => {
     const d = now();
-    els.time.textContent = fmtTime(d);
-    els.date.textContent = fmtDate(d);
     // The question fires once per clock-in, a beat after the hour turns so the
     // room is already on screen when it asks.
     if (armed && !fired && !out && d.getHours() >= 18) {
@@ -66,17 +58,9 @@ export function markClockedIn() {
   out = false;
   armed = true;
   fired = false;
-  setState('clocked-in', false);
 }
 
 export function markClockedOut() {
   out = true;
   armed = false;
-  setState('clocked-out', true);
-}
-
-function setState(label, isOut) {
-  if (!els) return;
-  els.state.classList.toggle('is-out', isOut);
-  els.label.textContent = label;
 }

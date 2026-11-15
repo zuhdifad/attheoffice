@@ -1,9 +1,9 @@
-import { SCREEN_W, SCREEN_H } from '../core/config.js?v=8';
-import { canvas, text, px } from '../core/draw.js?v=8';
-import { bustFor } from '../art/characters.js?v=8';
-import { CHARACTERS } from '../art/palette.js?v=8';
-import { faceToward } from '../entities/player.js?v=8';
-import { sfx } from '../core/audio.js?v=8';
+import { SCREEN_W, SCREEN_H } from '../core/config.js?v=9';
+import { canvas, text, px } from '../core/draw.js?v=9';
+import { bustFor } from '../art/characters.js?v=9';
+import { CHARACTERS } from '../art/palette.js?v=9';
+import { faceToward } from '../entities/player.js?v=9';
+import { sfx } from '../core/audio.js?v=9';
 
 // The conversation box, in the register of the handheld reference: a parchment
 // panel with a dark-brown rounded border, the speaker's bust framed at the top

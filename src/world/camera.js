@@ -1,4 +1,4 @@
-import { TILE, SCREEN_W, VIEW_PX_H } from '../core/config.js?v=8';
+import { TILE, SCREEN_W, VIEW_PX_H } from '../core/config.js?v=9';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 

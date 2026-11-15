@@ -15,11 +15,13 @@ let enabled = false;
 // know which one produced an input.
 let padDir = null;
 let padWork = false;
-// Edge counters, consumed once per simulated frame. workTap is the press that
-// opens a conversation; confirmTap advances a dialogue page (E / Space / Enter
-// / click / tap all fold into it). Holding E never re-triggers either.
+// Edge counters, consumed once per simulated frame. Z is the A button (talk to
+// the colleague beside you, advance a page); X is the B button (back out of an
+// open conversation). Enter, a click or a tap still confirm, so a mouse or a
+// finger never needs the keyboard. Holding a key never re-triggers any of them.
 let workTaps = 0;
 let confirmTaps = 0;
+let backTaps = 0;
 
 export function setInputEnabled(on) {
   enabled = on;
@@ -30,6 +32,7 @@ export function setInputEnabled(on) {
   padWork = false;
   workTaps = 0;
   confirmTaps = 0;
+  backTaps = 0;
 }
 
 export function setPadDirection(dir) {
@@ -46,23 +49,27 @@ export function tapConfirm() {
   confirmTaps++;
 }
 
+// The B button on touch: close the conversation that is open, nothing else.
+export function tapBack() {
+  backTaps++;
+}
+
 window.addEventListener('keydown', (e) => {
   if (!enabled) return;
   const k = e.key.toLowerCase();
-  if (k === ' ' || k === 'spacebar') {
-    e.preventDefault();
-    if (!e.repeat) confirmTaps++;
-    return;
-  }
-  if (k === 'enter') {
-    e.preventDefault();
-    if (!e.repeat) confirmTaps++;
-    return;
-  }
-  if (k === 'e') {
+  if (k === 'z') {
     e.preventDefault();
     if (!e.repeat) { workTaps++; confirmTaps++; }
-    HELD.add('e');
+    return;
+  }
+  if (k === 'x') {
+    e.preventDefault();
+    if (!e.repeat) backTaps++;
+    return;
+  }
+  if (k === ' ' || k === 'spacebar' || k === 'enter') {
+    e.preventDefault();
+    if (!e.repeat) confirmTaps++;
     return;
   }
   if (!KEY_DIRS[k]) return;
@@ -74,7 +81,6 @@ window.addEventListener('keydown', (e) => {
 
 window.addEventListener('keyup', (e) => {
   const k = e.key.toLowerCase();
-  if (k === 'e') { HELD.delete('e'); return; }
   HELD.delete(k);
   const i = ORDER.indexOf(k);
   if (i >= 0) ORDER.splice(i, 1);
@@ -88,6 +94,7 @@ window.addEventListener('blur', () => {
   padWork = false;
   workTaps = 0;
   confirmTaps = 0;
+  backTaps = 0;
 });
 
 // FireRed walks whichever direction you pressed last, so press order beats
@@ -100,14 +107,16 @@ export function heldDirection() {
   return padDir;
 }
 
-// Read once per simulated frame: the tap is consumed so one press can never
+// Read once per simulated frame: the taps are consumed so one press can never
 // open two conversations, and holding a key does nothing at all.
 export function readActions() {
   const a = {
     workTap: workTaps > 0,
-    confirmTap: confirmTaps > 0
+    confirmTap: confirmTaps > 0,
+    backTap: backTaps > 0
   };
   workTaps = 0;
   confirmTaps = 0;
+  backTaps = 0;
   return a;
 }

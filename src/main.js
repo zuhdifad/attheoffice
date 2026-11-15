@@ -1,28 +1,25 @@
-import { FRAME_MS } from './core/config.js?v=8';
-import { state, resetDay } from './core/state.js?v=8';
-import { g, screen, fitZoom, applyZoom, setZoom, zoomBy, bindResize, present } from './core/display.js?v=8';
-import { setInputEnabled, setPadDirection, setPadWork, tapConfirm } from './core/input.js?v=8';
-import { setMuted, sfx, setAmbience } from './core/audio.js?v=8';
-import { CHARACTERS, PAL } from './art/palette.js?v=8';
-import { loadRoster } from './art/characters.js?v=8';
-import { loadAtlas } from './art/tiles.js?v=8';
-import { buildPlace } from './world/places/index.js?v=8';
-import { createMap } from './world/map.js?v=8';
-import { buildNpcs } from './entities/npc.js?v=8';
-import { createPlayer } from './entities/player.js?v=8';
-import { centerCamera } from './world/camera.js?v=8';
-import { resetFx, sparkle } from './world/fx.js?v=8';
-import * as wall from './ui/wallclock.js?v=8';
-import * as rail from './ui/rail.js?v=8';
-import * as clockin from './screens/clockin.js?v=8';
-import * as select from './screens/select.js?v=8';
-import * as world from './screens/world.js?v=8';
+import { FRAME_MS } from './core/config.js?v=9';
+import { state, resetDay } from './core/state.js?v=9';
+import { g, screen, applyZoom, bindResize, present } from './core/display.js?v=9';
+import { setInputEnabled, setPadDirection, setPadWork, tapConfirm, tapBack } from './core/input.js?v=9';
+import { setMuted, sfx, setAmbience } from './core/audio.js?v=9';
+import { CHARACTERS, PAL } from './art/palette.js?v=9';
+import { loadRoster } from './art/characters.js?v=9';
+import { loadAtlas } from './art/tiles.js?v=9';
+import { buildPlace } from './world/places/index.js?v=9';
+import { createMap } from './world/map.js?v=9';
+import { buildNpcs } from './entities/npc.js?v=9';
+import { createPlayer } from './entities/player.js?v=9';
+import { centerCamera } from './world/camera.js?v=9';
+import { resetFx, sparkle } from './world/fx.js?v=9';
+import * as wall from './ui/wallclock.js?v=9';
+import * as clockin from './screens/clockin.js?v=9';
+import * as select from './screens/select.js?v=12';
+import * as world from './screens/world.js?v=9';
 
 // The router. Only one screen is canvas-drawn; the start screen, the badge
 // questions and the picker are DOM and keep their own markup.
 const SCREENS = { world };
-
-let mounted = false;
 
 function render() {
   if (!state.running) return;
@@ -62,22 +59,14 @@ function boot(who) {
   resetDay();
   buildDay(who);
 
-  document.getElementById('gameArea').style.display = 'grid';
+  document.getElementById('gameArea').style.display = 'block';
   document.body.classList.add('in-game');
 
   state.mode = 'world';
   state.running = true;
-  state.zoomManual = false;
-  state.zoom = fitZoom();
+  // The room is pinned at 2x on every visit; there is no zoom control left.
+  state.zoom = 2;
   applyZoom(state);
-
-  if (!mounted) {
-    rail.mount(state, handlers);
-    mounted = true;
-  } else {
-    rail.rebuild(state);
-  }
-  rail.refresh(state);
 
   // A fresh clock-in re-arms the evening question and clears any old receipt.
   wall.markClockedIn();
@@ -155,7 +144,6 @@ function clockOut() {
   wall.markClockedOut();
   sfx.clockOut();
   sparkle(state.player.tx, state.player.ty, PAL.amber);
-  rail.refresh(state);
 }
 
 function bindClockOut() {
@@ -169,45 +157,23 @@ function bindClockOut() {
   });
 }
 
-// ---- options ----------------------------------------------------------------
+// ---- pause -------------------------------------------------------------------
+// Esc is the pause: the room freezes, the ambience drops, and the details panel
+// takes the picture. Input is dropped while it is up so no key stays held down
+// behind the card.
 
-const handlers = {
-  speed(v) {
-    state.speed = v;
-    sfx.ui();
-  },
-  zoom(v) {
-    setZoom(state, v);
-    rail.refresh(state);
-  },
-  zoomStep(d) {
-    zoomBy(state, d);
-    sfx.ui();
-    rail.refresh(state);
-  },
-  hints(on) {
-    state.hints = on;
-    sfx.ui();
-  },
-  grid(on) {
-    state.grid = on;
-    sfx.ui();
-  },
-  pause() {
-    state.paused = !state.paused;
-    setAmbience(state.paused ? 0.03 : 0.10);
-    sfx.ui();
-    rail.refresh(state);
-  },
-  restart,
-  swap: changeWorker
-};
+function togglePause() {
+  if (state.phase !== 'play') return;
+  state.paused = !state.paused;
+  setInputEnabled(!state.paused);
+  setAmbience(state.paused ? 0.03 : 0.10);
+  sfx.ui();
+}
 
 // ---- loop -------------------------------------------------------------------
 let last = 0;
 let acc = 0;
 let looping = false;
-let railClock = 0;
 
 function frame(now) {
   if (!state.running) { looping = false; return; }
@@ -225,11 +191,6 @@ function frame(now) {
   }
 
   render();
-
-  // The rail is DOM; ten updates a second is plenty and keeps layout off the
-  // frame budget.
-  if (++railClock % 6 === 0) rail.refresh(state);
-
   requestAnimationFrame(frame);
 }
 
@@ -256,15 +217,18 @@ function bindChrome() {
   window.addEventListener('keydown', (e) => {
     if (!state.running) return;
     const k = e.key.toLowerCase();
-    if (k === '+' || k === '=') { zoomBy(state, 1); rail.refresh(state); }
-    else if (k === '-' || k === '_') { zoomBy(state, -1); rail.refresh(state); }
-    else if (k === 'p') handlers.pause();
+    // Esc is the pause. The clock-out question owns Esc while it is up.
+    if (k === 'escape') {
+      if (!clockOutModal.hidden) return;
+      togglePause();
+    }
     else if (k === 'r' && state.phase === 'done') restart();
     else if (k === 'c' && state.phase === 'done') changeWorker();
     else if (k === 'm') mute.click();
   });
 
-  // Touch pad. Pointer events cover mouse, pen and finger with one path.
+  // Touch pad. Pointer events cover mouse, pen and finger with one path. The A
+  // pad talks and advances; the B pad backs out of a conversation.
   for (const btn of document.querySelectorAll('#touchPad [data-dir]')) {
     const dir = btn.dataset.dir;
     const on = (e) => { e.preventDefault(); setPadDirection(dir); btn.classList.add('is-down'); };
@@ -280,8 +244,14 @@ function bindChrome() {
     work.addEventListener(ev, () => { setPadWork(false); work.classList.remove('is-down'); });
   }
 
+  const back = document.getElementById('touchBack');
+  back.addEventListener('pointerdown', (e) => { e.preventDefault(); tapBack(); back.classList.add('is-down'); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) {
+    back.addEventListener(ev, () => back.classList.remove('is-down'));
+  }
+
   // A click or tap on the room itself talks to a colleague beside you, or
-  // advances an open conversation — the same as E / Space / Enter, so a mouse
+  // advances an open conversation — the same as Z / Space / Enter, so a mouse
   // or a finger never needs the keyboard.
   screen.addEventListener('pointerdown', (e) => { e.preventDefault(); tapConfirm(); });
 }
@@ -307,9 +277,12 @@ async function main() {
   wall.bind({ onAfterHours: askClockOut });
 
   clockin.bind({
-    onStartToWork: ({ name, floor }) => {
+    onStartToWork: ({ name, floor, seat, role, partner }) => {
       state.playerName = name;
       state.floor = floor;
+      state.seat = seat;
+      state.role = role;
+      state.partner = partner;
       select.open();
     }
   });

@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- ?v= is a cache key: bump it when the sheet or the modules change, or the
        browser will happily keep serving the copy it already has. -->
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=15" />
 </head>
 <body>
 
@@ -84,6 +84,30 @@
         </div>
         <button id="whereBack" class="back-link" type="button">← Back</button>
       </section>
+
+      <section class="enlist-stage" id="stageSeat">
+        <h2>Pick a seat</h2>
+        <div id="seatPick" class="seat-pick" role="group" aria-label="Seat"></div>
+        <button id="seatBack" class="back-link" type="button">← Back</button>
+      </section>
+
+      <section class="enlist-stage" id="stageRole">
+        <h2>Pick your role</h2>
+        <div id="rolePick" class="role-pick" role="group" aria-label="Role"></div>
+        <button id="roleBack" class="back-link" type="button">← Back</button>
+      </section>
+
+      <section class="enlist-stage" id="stagePartner">
+        <h2>Who will play with you?</h2>
+        <form id="partnerForm" class="who-form" autocomplete="off" novalidate>
+          <input id="partnerInput" class="who-input" type="email" name="partner" maxlength="64"
+                 placeholder="Teammate's email" autocomplete="off" spellcheck="false"
+                 aria-label="Teammate's email address" />
+          <button class="btn btn-primary wide" type="submit">Continue</button>
+        </form>
+        <p class="enlist-err" id="partnerError" role="alert"></p>
+        <button id="partnerBack" class="back-link" type="button">← Back</button>
+      </section>
     </div>
   </div>
 
@@ -91,136 +115,38 @@
   <div id="characterSelectPopup" class="popup">
     <div class="popup-content picker">
       <div class="picker-head">
-        <div class="picker-title">
-          <h2>Select your character</h2>
-          <p class="picker-sub" id="pickerSub">Everyone on floor 12 is clocked in. Choose who you are today.</p>
-        </div>
-        <p class="page-info">Worker <span id="currentPage">1</span> / <span id="totalPages">13</span></p>
+        <h2>Select your character</h2>
       </div>
 
-      <div id="charCard" class="char-card">
-        <figure class="dossier">
-          <span class="dossier-tag">Personnel file</span>
-          <span id="charBadge" class="dossier-badge">DEF-0417</span>
-          <img id="charPortrait" class="dossier-figure" src="assets/chars/zuhdi-card.png" alt="Zuhdi, full length" />
-          <figcaption id="charDept" class="dossier-dept">Engineering</figcaption>
-        </figure>
-
-        <div class="char-meta">
-          <p id="charName" class="char-name">Zuhdi</p>
-          <p id="charRole" class="char-role">Product Engineer</p>
-          <p id="charNote" class="char-note"></p>
-
-          <dl class="char-file">
-            <div><dt>Extension</dt><dd id="charExt">214</dd></div>
-            <div><dt>Joined</dt><dd id="charSince">2021</dd></div>
-            <div><dt>Usual spot</dt><dd id="charDesk">Bank A · 03</dd></div>
-          </dl>
-
-          <div class="floor-proof">
-            <canvas id="charCanvas" width="112" height="112" aria-label="Animated in-game sprite preview"></canvas>
-            <div class="floor-proof-copy">
-              <span class="field-label">On the floor</span>
-              <p>The exact sprite that walks the office, shrunk to one tile. <b id="charFacing">Facing you</b> · six frames a stride.</p>
-            </div>
-          </div>
-        </div>
+      <div class="showcase">
+        <button id="prevBtn" class="showcase-arrow prev" type="button" aria-label="Previous character">‹</button>
+        <img id="charCardImg" class="showcase-card" src="assets/chars/zuhdi-card.png" alt="Selected character" />
+        <button id="nextBtn" class="showcase-arrow next" type="button" aria-label="Next character">›</button>
       </div>
 
-      <div class="rail-pick">
-        <span class="field-label">The whole floor <i>click a face</i></span>
-        <div id="charRail" class="char-rail" role="tablist" aria-label="Roster"></div>
-      </div>
-
-      <div class="nav-buttons">
-        <button id="prevBtn" class="btn nav-btn" type="button">← Prev</button>
-        <button id="nextBtn" class="btn nav-btn" type="button">Next →</button>
-      </div>
-
-      <button id="confirmCharBtn" class="btn btn-primary wide" type="button">Confirm &amp; clock in</button>
+      <button id="confirmCharBtn" class="btn btn-primary wide" type="button">Clock-in</button>
     </div>
   </div>
 
   <!-- ================= GAME ================= -->
+  <!-- The room is the whole screen. The clock, the date and the clocked-in chip
+       are painted inside the picture, so nothing sits outside the box. -->
   <div id="gameArea" class="game-area" style="display: none;">
-
-    <header class="game-top clock-top">
-      <div class="wall-clock">
-        <div class="wall-time" id="wallTime">00:00:00</div>
-        <div class="wall-meta">
-          <span class="wall-date" id="wallDate">01/01/2026</span>
-          <span class="wall-state" id="clockState"><i class="dot"></i><span id="clockStateLabel">clocked-in</span></span>
-        </div>
-      </div>
-      <button id="clockOutBtn" class="btn btn-ghost clock-out-btn" type="button" hidden>Clock out</button>
-    </header>
-
     <div id="stage" class="stage">
       <canvas id="gameCanvas" width="480" height="288"></canvas>
+
+      <!-- The evening offer, should the 18:00 question be declined. -->
+      <button id="clockOutBtn" class="btn btn-ghost clock-out-btn" type="button" hidden>Clock out</button>
 
       <div id="touchPad" class="touch-pad">
         <button class="pad up" data-dir="up" type="button" aria-label="Walk up">▲</button>
         <button class="pad left" data-dir="left" type="button" aria-label="Walk left">◀</button>
         <button class="pad right" data-dir="right" type="button" aria-label="Walk right">▶</button>
         <button class="pad down" data-dir="down" type="button" aria-label="Walk down">▼</button>
-        <button id="touchWork" class="pad act" type="button">TALK</button>
+        <button id="touchBack" class="pad act-b" type="button">B</button>
+        <button id="touchWork" class="pad act" type="button">A</button>
       </div>
     </div>
-
-    <aside class="rail">
-      <section class="rail-block">
-        <div class="rail-head"><h3>Floor plan</h3><span class="rail-hint">you are here</span></div>
-        <div class="map-wrap"><canvas id="miniMap" width="228" height="168"></canvas></div>
-      </section>
-
-      <section class="rail-block rail-controls">
-        <div class="rail-head"><h3>Controls</h3><span class="rail-hint">applied live</span></div>
-
-        <label class="field">
-          <span class="field-label">Walk pace</span>
-          <select id="optSpeed">
-            <option value="0.75">0.75× relaxed</option>
-            <option value="1" selected>1× normal</option>
-            <option value="1.5">1.5× brisk</option>
-            <option value="2">2× rush</option>
-          </select>
-        </label>
-
-        <div class="field">
-          <span class="field-label">Zoom <b id="zoomVal">2×</b></span>
-          <div class="stepper">
-            <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
-            <input id="optZoom" type="range" min="1" max="6" step="1" value="2" aria-label="Zoom level" />
-            <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
-          </div>
-        </div>
-
-        <label class="switch">
-          <input id="optHints" type="checkbox" checked />
-          <span class="track"><i></i></span>
-          <span>Talk hints</span>
-        </label>
-
-        <label class="switch">
-          <input id="optGrid" type="checkbox" />
-          <span class="track"><i></i></span>
-          <span>Tile grid</span>
-        </label>
-
-        <div class="rail-buttons">
-          <button id="optPause" class="btn btn-ghost" type="button">Pause</button>
-          <button id="optRestart" class="btn btn-ghost" type="button">Restart</button>
-          <button id="optSwap" class="btn btn-ghost wide" type="button">Change worker</button>
-        </div>
-      </section>
-    </aside>
-
-    <footer class="game-foot">
-      <span><kbd>WASD</kbd> walk</span>
-      <span><kbd>E</kbd> talk to a colleague</span>
-      <span><kbd>P</kbd> pause</span>
-      <span><kbd>M</kbd> mute</span>
-    </footer>
   </div>
 
   <!-- After 18:00 the floor asks, once, whether you are heading home. -->
@@ -236,6 +162,6 @@
     </div>
   </div>
 
-  <script type="module" src="./src/main.js?v=9"></script>
+  <script type="module" src="./src/main.js?v=15"></script>
 </body>
 </html>

@@ -1,38 +1,121 @@
-import { initAudio, sfx } from '../core/audio.js?v=8';
+import { initAudio, sfx } from '../core/audio.js?v=9';
+import { CHARACTERS } from '../art/palette.js?v=9';
 
-// The title card hands over to a short loading plate — FIGHTING — and then to the
-// two questions the floor asks before it issues a badge: a name, and the level
-// that name works on. The answers ride out through the callback, so this module
-// keeps nothing but the run it is in the middle of.
+// The title card hands over to a short loading plate — FIGHTING — and then to
+// the questions the floor asks before it issues a badge: a name, a level, a
+// seat, a role, and the teammate coming in with you. The answers ride out
+// through the callback, so this module keeps nothing but the run it is in the
+// middle of.
 const LOAD_MS = 1700;
+
+// The floor is two desk banks of eight; the chips number each run the way the
+// personnel files do ("Bank A · 03").
+const BANKS = ['Bank A', 'Bank B'];
+const SEATS_PER_BANK = 8;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export function bind({ onStartToWork }) {
   const startBtn = document.getElementById('clockInBtn');
   const loader = document.getElementById('bootLoad');
   const popup = document.getElementById('popup');
-  const stageWho = document.getElementById('stageWho');
-  const stageWhere = document.getElementById('stageWhere');
+
+  const stages = {
+    who: document.getElementById('stageWho'),
+    where: document.getElementById('stageWhere'),
+    seat: document.getElementById('stageSeat'),
+    role: document.getElementById('stageRole'),
+    partner: document.getElementById('stagePartner')
+  };
+
   const whoForm = document.getElementById('whoForm');
   const whoInput = document.getElementById('whoInput');
   const whoError = document.getElementById('whoError');
-  const backBtn = document.getElementById('whereBack');
+  const partnerForm = document.getElementById('partnerForm');
+  const partnerInput = document.getElementById('partnerInput');
+  const partnerError = document.getElementById('partnerError');
   const floors = Array.from(document.querySelectorAll('#floorPick [data-floor]'));
 
   let name = '';
+  let floor = '';
+  let seat = '';
+  let role = '';
+  let current = 'who';
   let loading = false;
 
+  const seatBtns = [];
+  const roleBtns = [];
+
+  const focusFor = () => ({
+    who: whoInput,
+    where: floors[0],
+    seat: seatBtns[0],
+    role: roleBtns[0],
+    partner: partnerInput
+  }[current]);
+
   const showStage = (stage) => {
-    const who = stage === 'who';
-    stageWho.classList.toggle('is-on', who);
-    stageWhere.classList.toggle('is-on', !who);
+    current = stage;
+    for (const [key, node] of Object.entries(stages)) {
+      node.classList.toggle('is-on', key === stage);
+    }
     // Focus lands on whatever the stage is asking for, so a keyboard player
     // never has to hunt for it.
-    requestAnimationFrame(() => (who ? whoInput : floors[0]).focus());
+    requestAnimationFrame(() => focusFor()?.focus());
   };
 
-  const close = () => { popup.style.display = 'none'; };
+  // Escape walks the questions backwards before it gives up the floor.
+  const PREV = { where: 'who', seat: 'where', role: 'seat', partner: 'role' };
 
-  const askWhere = () => showStage('where');
+  // ---- pick a seat ---------------------------------------------------------
+  const seatPick = document.getElementById('seatPick');
+  for (const bank of BANKS) {
+    const group = document.createElement('div');
+    group.className = 'seat-group';
+    const label = document.createElement('span');
+    label.className = 'field-label';
+    label.textContent = bank;
+    const row = document.createElement('div');
+    row.className = 'seat-row';
+    for (let n = 1; n <= SEATS_PER_BANK; n++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pick-btn';
+      const num = String(n).padStart(2, '0');
+      b.dataset.seat = `${bank} · ${num}`;
+      b.textContent = num;
+      b.setAttribute('aria-label', b.dataset.seat);
+      b.addEventListener('click', () => {
+        seat = b.dataset.seat;
+        sfx.ui();
+        showStage('role');
+      });
+      row.append(b);
+      seatBtns.push(b);
+    }
+    group.append(label, row);
+    seatPick.append(group);
+  }
+
+  // ---- pick a role ---------------------------------------------------------
+  // The roles are the ones already on the floor, so the badge never claims a
+  // job that does not exist in this office.
+  const rolePick = document.getElementById('rolePick');
+  for (const title of [...new Set(CHARACTERS.map((c) => c.role))]) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pick-btn';
+    b.textContent = title;
+    b.addEventListener('click', () => {
+      role = title;
+      sfx.ui();
+      showStage('partner');
+    });
+    rolePick.append(b);
+    roleBtns.push(b);
+  }
+
+  const close = () => { popup.style.display = 'none'; };
 
   // Opening the floor is deliberately a two-second beat: the guard stops a
   // second Enter from stacking a second loader on top of the first.
@@ -68,7 +151,7 @@ export function bind({ onStartToWork }) {
     whoError.textContent = '';
     name = value;
     sfx.ui();
-    askWhere();
+    showStage('where');
   });
 
   whoInput.addEventListener('input', () => {
@@ -77,15 +160,41 @@ export function bind({ onStartToWork }) {
     whoError.textContent = '';
   });
 
-  backBtn.addEventListener('click', () => { sfx.back(); showStage('who'); });
-
   for (const btn of floors) {
     btn.addEventListener('click', () => {
-      sfx.clockIn();
-      close();
-      onStartToWork({ name, floor: btn.dataset.floor });
+      floor = btn.dataset.floor;
+      sfx.ui();
+      showStage('seat');
     });
   }
+
+  partnerForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = partnerInput.value.trim();
+    if (!EMAIL_RE.test(value)) {
+      partnerInput.classList.add('is-bad');
+      partnerError.textContent = 'Needs a valid email address.';
+      partnerInput.focus();
+      sfx.back();
+      return;
+    }
+    partnerInput.classList.remove('is-bad');
+    partnerError.textContent = '';
+    sfx.clockIn();
+    close();
+    onStartToWork({ name, floor, seat, role, partner: value });
+  });
+
+  partnerInput.addEventListener('input', () => {
+    if (!partnerInput.classList.contains('is-bad')) return;
+    partnerInput.classList.remove('is-bad');
+    partnerError.textContent = '';
+  });
+
+  document.getElementById('whereBack').addEventListener('click', () => { sfx.back(); showStage('who'); });
+  document.getElementById('seatBack').addEventListener('click', () => { sfx.back(); showStage('where'); });
+  document.getElementById('roleBack').addEventListener('click', () => { sfx.back(); showStage('seat'); });
+  document.getElementById('partnerBack').addEventListener('click', () => { sfx.back(); showStage('role'); });
 
   window.addEventListener('click', (e) => {
     if (e.target === popup) { sfx.back(); close(); }
@@ -102,13 +211,12 @@ export function bind({ onStartToWork }) {
 
   window.addEventListener('keydown', (e) => {
     if (popup.style.display === 'flex') {
-      const onWhere = stageWhere.classList.contains('is-on');
       if (e.key === 'Escape') {
-        // Escape walks the questions backwards before it gives up the floor.
+        const back = PREV[current];
         sfx.back();
-        if (onWhere) showStage('who');
+        if (back) showStage(back);
         else close();
-      } else if (onWhere && /^[1-3]$/.test(e.key)) {
+      } else if (current === 'where' && /^[1-3]$/.test(e.key)) {
         const btn = floors[Number(e.key) - 1];
         if (btn) { e.preventDefault(); btn.click(); }
       }

@@ -13,10 +13,14 @@ export const state = {
   tick: 0,
 
   chosen: null,
-  // Asked on the title card before the picker: the player's own name, and the
-  // level they say they work on. A restart keeps both.
+  // Asked on the title card before the picker: the player's own name, the level
+  // they say they work on, the seat and role they claim, and the teammate they
+  // bring in by email. A restart keeps all of it.
   playerName: '',
   floor: '',
+  seat: '',
+  role: '',
+  partner: '',
   player: null,
   npcs: [],
   occupied: new Set(),
@@ -26,8 +30,8 @@ export const state = {
   walkable: () => false,
 
   cam: { x: 0, y: 0, shake: 0 },
-  zoom: 1,
-  zoomManual: false,
+  // Pinned at 2x: the room always opens on the same framed picture.
+  zoom: 2,
 
   // The visit, in real device time. clockedInAt is stamped when the worker is
   // confirmed; askingClockOut freezes the player while the 18:00 question is
@@ -38,10 +42,9 @@ export const state = {
   talks: new Set(),
   result: null,
 
-  // Options, all live from the control rail.
+  // What is left of the options: walk pace and sound. Everything else the
+  // floor needs is drawn inside the picture.
   speed: 1,
-  hints: true,
-  grid: false,
   muted: false,
 
   // An open Harvest Moon-style conversation, or null. While it is up the player

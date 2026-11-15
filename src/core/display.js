@@ -1,6 +1,4 @@
-import { SCREEN_W, SCREEN_H, ZOOM_MIN, ZOOM_MAX } from './config.js?v=8';
-
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+import { SCREEN_W, SCREEN_H } from './config.js?v=9';
 
 export const screen = document.getElementById('gameCanvas');
 export const sctx = screen.getContext('2d');
@@ -18,19 +16,9 @@ screen.width = SCREEN_W;
 screen.height = SCREEN_H;
 sctx.imageSmoothingEnabled = false;
 
-// Measured against the stage, not the window: the control rail owns its own
-// column and the room only gets what is left.
-export function fitZoom() {
-  const stage = document.getElementById('stage');
-  const r = stage ? stage.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
-  const availW = Math.max(SCREEN_W, r.width - 20);
-  const availH = Math.max(SCREEN_H, r.height - 20);
-  const raw = Math.min(availW / SCREEN_W, availH / SCREEN_H);
-  return clamp(Math.floor(raw), ZOOM_MIN, ZOOM_MAX);
-}
-
-// Integer zoom whenever the room fits; below 1x the whole buffer is scaled by
-// one common factor so the picture is never squashed on a narrow phone.
+// The room is pinned at 2x: there is no zoom control and every visit opens on
+// the same framed picture. A small screen scales the whole buffer down by one
+// common factor, so the room is letterboxed rather than cropped.
 export function applyZoom(state) {
   const stage = document.getElementById('stage');
   let w = SCREEN_W * state.zoom;
@@ -46,22 +34,9 @@ export function applyZoom(state) {
   screen.style.height = `${Math.round(h)}px`;
 }
 
-export function setZoom(state, value) {
-  state.zoom = clamp(Math.round(value), ZOOM_MIN, ZOOM_MAX);
-  state.zoomManual = true;
-  applyZoom(state);
-}
-
-export function zoomBy(state, delta) {
-  setZoom(state, state.zoom + delta);
-}
-
 export function bindResize(state) {
   const refit = () => {
     if (!state.running) return;
-    if (!state.zoomManual) state.zoom = fitZoom();
-    // Even on a manual zoom the fit is recomputed, so rotating a phone never
-    // pushes the room out of its stage.
     applyZoom(state);
   };
   window.addEventListener('resize', refit);

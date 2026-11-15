@@ -1,12 +1,11 @@
-import { TILE, CHAR_H, VIEW_W, SCREEN_W, SCREEN_H, WORLD_SY, VIEW_PX_H } from '../core/config.js?v=8';
-import { isObject, blitCell, atlasImage } from '../art/tiles.js?v=8';
-import { PAL } from '../art/palette.js?v=8';
-import { drawChar } from '../art/characters.js?v=8';
-import { text, px } from '../core/draw.js?v=8';
-import { drawLight, drawGrade, drawTimeOfDay } from './lighting.js?v=8';
-import { drawFx } from './fx.js?v=8';
-import { nearestTalkable } from '../ui/dialogue.js?v=8';
-import { now } from '../ui/wallclock.js?v=8';
+import { TILE, CHAR_H, VIEW_W, SCREEN_W, SCREEN_H, WORLD_SY, VIEW_PX_H } from '../core/config.js?v=9';
+import { isObject, blitCell, atlasImage } from '../art/tiles.js?v=9';
+import { PAL } from '../art/palette.js?v=9';
+import { drawChar } from '../art/characters.js?v=9';
+import { text, px } from '../core/draw.js?v=9';
+import { drawLight, drawGrade, drawTimeOfDay } from './lighting.js?v=9';
+import { drawFx } from './fx.js?v=9';
+import { now } from '../ui/wallclock.js?v=9';
 
 const LIFT = CHAR_H - TILE;
 
@@ -53,7 +52,6 @@ export function drawWorld(g, state) {
   }
 
   drawGrout(g, rcam, x0, y0, rows, map);
-  if (state.grid) drawGrid(g, rcam, x0, y0, rows);
 
   // Contact shadows go down before anything stands on them.
   const people = [];
@@ -109,7 +107,6 @@ export function drawWorld(g, state) {
   // world space, so it tracks the sprite it belongs to.
   for (const n of people) if (n.say > 0) bubble(g, n, rcam);
   drawNameTags(g, state, rcam, people);
-  if (state.hints && !state.dialogue) talkHint(g, state, rcam);
 
   g.restore();
 
@@ -167,27 +164,6 @@ function drawGrout(g, cam, x0, y0, rows, map) {
   g.restore();
 }
 
-function drawGrid(g, cam, x0, y0, rows) {
-  g.save();
-  g.strokeStyle = 'rgba(150,200,215,0.16)';
-  g.lineWidth = 1;
-  for (let x = x0; x <= x0 + VIEW_W + 1; x++) {
-    const dx = Math.round(x * TILE - cam.x) + 0.5;
-    g.beginPath();
-    g.moveTo(dx, 0);
-    g.lineTo(dx, SCREEN_H);
-    g.stroke();
-  }
-  for (let y = y0; y <= y0 + rows; y++) {
-    const dy = Math.round(y * TILE - cam.y) + 0.5;
-    g.beginPath();
-    g.moveTo(0, dy);
-    g.lineTo(SCREEN_W, dy);
-    g.stroke();
-  }
-  g.restore();
-}
-
 function bubble(g, n, cam) {
   const dx = Math.round(n.px - cam.x) + TILE / 2;
   const dy = Math.round(n.py - cam.y) - LIFT - 4;
@@ -209,30 +185,6 @@ function bubble(g, n, cam) {
   g.closePath();
   g.fill();
   text(g, n.line, x + w / 2, y + 9, PAL.ink, 'center', 7);
-  g.restore();
-}
-
-// A small parchment chip over the nearest colleague you can talk to, so the
-// conversation is discoverable without reading the manual.
-function talkHint(g, state, cam) {
-  const n = nearestTalkable(state);
-  // A bubble already owns the space above their head; the chip waits its turn.
-  if (!n || n.say > 0) return;
-  const dx = Math.round(n.px - cam.x) + TILE / 2;
-  const dy = Math.round(n.py - cam.y) - LIFT - 12;
-  const label = 'E · Talk';
-  g.save();
-  g.font = '7px ui-monospace, Menlo, monospace';
-  const w = Math.ceil(g.measureText(label).width) + 10;
-  const x = Math.max(2, Math.min(SCREEN_W - w - 2, dx - w / 2));
-  const y = Math.max(14, dy - 12);
-  px(g, x + 1, y + 1, w, 12, 'rgba(20,16,10,0.35)');
-  px(g, x, y, w, 12, '#f7efd3');
-  px(g, x, y, w, 1, '#5a4632');
-  px(g, x, y + 11, w, 1, '#5a4632');
-  px(g, x, y, 1, 12, '#5a4632');
-  px(g, x + w - 1, y, 1, 12, '#5a4632');
-  text(g, label, x + w / 2, y + 9, '#3a2c1a', 'center', 7);
   g.restore();
 }
 

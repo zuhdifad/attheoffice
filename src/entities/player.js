@@ -1,5 +1,5 @@
-import { TILE, STEP_FRAMES } from '../core/config.js?v=8';
-import { frameFor } from '../art/characters.js?v=8';
+import { TILE, STEP_FRAMES } from '../core/config.js?v=9';
+import { frameFor } from '../art/characters.js?v=9';
 
 const DELTA = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 

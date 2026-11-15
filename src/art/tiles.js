@@ -1,5 +1,5 @@
-import { ATLAS_COLS, ATLAS_CELL_W, ATLAS_CELL_H, TILE } from '../core/config.js?v=8';
-import { canvas } from '../core/draw.js?v=8';
+import { ATLAS_COLS, ATLAS_CELL_W, ATLAS_CELL_H, TILE } from '../core/config.js?v=9';
+import { canvas } from '../core/draw.js?v=9';
 
 // Every piece of the office comes out of the one atlas the art was authored in.
 // A glyph names a cell; collision and draw order live next to it, because a desk

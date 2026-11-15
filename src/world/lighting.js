@@ -1,5 +1,5 @@
-import { TILE, VIEW_W, VIEW_H, SCREEN_W, SCREEN_H } from '../core/config.js?v=8';
-import { vignette } from '../art/backdrop.js?v=8';
+import { TILE, VIEW_W, VIEW_H, SCREEN_W, SCREEN_H } from '../core/config.js?v=9';
+import { vignette } from '../art/backdrop.js?v=9';
 
 // Post pass: daylight out of the north glazing, the warm lift the phone booth
 // throws, then a vignette that pulls the eye to the middle of the room.
