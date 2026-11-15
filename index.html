@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- ?v= is a cache key: bump it when the sheet or the modules change, or the
        browser will happily keep serving the copy it already has. -->
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
 
@@ -58,11 +58,6 @@
   <!-- Two questions before the floor hands over a badge: a name, then a level. -->
   <div id="popup" class="popup">
     <div class="popup-content enlist">
-      <div class="enlist-head">
-        <p class="enlist-step" id="enlistStep">01 / 02</p>
-        <span class="enlist-badge">DEF PROJECT</span>
-      </div>
-
       <section class="enlist-stage is-on" id="stageWho">
         <h2>Who are you?</h2>
         <form id="whoForm" class="who-form" autocomplete="off" novalidate>
@@ -76,7 +71,6 @@
 
       <section class="enlist-stage" id="stageWhere">
         <h2>Where do you work?</h2>
-        <p class="enlist-sub" id="whereSub">Pick the level your desk sits on.</p>
         <div class="floor-pick" id="floorPick" role="group" aria-label="Level">
           <button class="floor-btn" data-floor="Level 6" type="button">
             <span class="floor-key" aria-hidden="true">1</span><b>Level 6</b>
@@ -143,27 +137,22 @@
         <button id="nextBtn" class="btn nav-btn" type="button">Next →</button>
       </div>
 
-      <div class="shift-pick">
-        <span class="field-label">Shift pressure</span>
-        <div id="pickDifficulty" class="chips"></div>
-        <p id="pickShiftNote" class="shift-note"></p>
-      </div>
-
-      <button id="confirmCharBtn" class="btn btn-primary wide" type="button">Confirm &amp; start the day</button>
+      <button id="confirmCharBtn" class="btn btn-primary wide" type="button">Confirm &amp; clock in</button>
     </div>
   </div>
 
   <!-- ================= GAME ================= -->
   <div id="gameArea" class="game-area" style="display: none;">
 
-    <header class="game-top">
-      <span class="brand">DEF<i>PROJECT</i></span>
-      <span class="game-sub">A workday · floor 12</span>
-      <div class="game-top-right">
-        <span class="pill"><b id="railLeft">0/7</b> objectives</span>
-        <span class="pill pill-score"><b id="railScore">0</b> pts</span>
-        <span class="pill pill-combo">sync <b id="railCombo">—</b></span>
+    <header class="game-top clock-top">
+      <div class="wall-clock">
+        <div class="wall-time" id="wallTime">00:00:00</div>
+        <div class="wall-meta">
+          <span class="wall-date" id="wallDate">01/01/2026</span>
+          <span class="wall-state" id="clockState"><i class="dot"></i><span id="clockStateLabel">clocked-in</span></span>
+        </div>
       </div>
+      <button id="clockOutBtn" class="btn btn-ghost clock-out-btn" type="button" hidden>Clock out</button>
     </header>
 
     <div id="stage" class="stage">
@@ -174,23 +163,13 @@
         <button class="pad left" data-dir="left" type="button" aria-label="Walk left">◀</button>
         <button class="pad right" data-dir="right" type="button" aria-label="Walk right">▶</button>
         <button class="pad down" data-dir="down" type="button" aria-label="Walk down">▼</button>
-        <button id="touchWork" class="pad act" type="button">WORK</button>
-        <button id="touchSync" class="pad sync" type="button">SYNC</button>
+        <button id="touchWork" class="pad act" type="button">TALK</button>
       </div>
     </div>
 
     <aside class="rail">
       <section class="rail-block">
-        <div class="rail-head">
-          <h3>Today</h3>
-          <span class="rail-clock" id="railClock">09:00</span>
-        </div>
-        <div class="day-track"><i id="railDayBar"></i></div>
-        <ol id="taskList" class="task-list"></ol>
-      </section>
-
-      <section class="rail-block">
-        <div class="rail-head"><h3>Floor plan</h3><span class="rail-hint">you · objective · done</span></div>
+        <div class="rail-head"><h3>Floor plan</h3><span class="rail-hint">you are here</span></div>
         <div class="map-wrap"><canvas id="miniMap" width="228" height="168"></canvas></div>
       </section>
 
@@ -198,16 +177,7 @@
         <div class="rail-head"><h3>Controls</h3><span class="rail-hint">applied live</span></div>
 
         <label class="field">
-          <span class="field-label">Difficulty</span>
-          <select id="optDifficulty">
-            <option value="chill">Chill · 4:00</option>
-            <option value="normal" selected>Normal · 3:00</option>
-            <option value="crunch">Crunch · 2:15</option>
-          </select>
-        </label>
-
-        <label class="field">
-          <span class="field-label">Game speed</span>
+          <span class="field-label">Walk pace</span>
           <select id="optSpeed">
             <option value="0.75">0.75× relaxed</option>
             <option value="1" selected>1× normal</option>
@@ -228,7 +198,7 @@
         <label class="switch">
           <input id="optHints" type="checkbox" checked />
           <span class="track"><i></i></span>
-          <span>Objective markers</span>
+          <span>Talk hints</span>
         </label>
 
         <label class="switch">
@@ -239,7 +209,7 @@
 
         <div class="rail-buttons">
           <button id="optPause" class="btn btn-ghost" type="button">Pause</button>
-          <button id="optRestart" class="btn btn-ghost" type="button">Restart day</button>
+          <button id="optRestart" class="btn btn-ghost" type="button">Restart</button>
           <button id="optSwap" class="btn btn-ghost wide" type="button">Change worker</button>
         </div>
       </section>
@@ -247,14 +217,25 @@
 
     <footer class="game-foot">
       <span><kbd>WASD</kbd> walk</span>
-      <span><kbd>E</kbd> hold to work</span>
-      <span><kbd>Space</kbd> sync in the amber band</span>
+      <span><kbd>E</kbd> talk to a colleague</span>
       <span><kbd>P</kbd> pause</span>
-      <span><kbd>R</kbd> restart after the report</span>
       <span><kbd>M</kbd> mute</span>
     </footer>
   </div>
 
-  <script type="module" src="./src/main.js?v=4"></script>
+  <!-- After 18:00 the floor asks, once, whether you are heading home. -->
+  <div id="clockOutModal" class="clockout-modal" hidden>
+    <div class="clockout-card">
+      <div class="clockout-time" id="clockOutTime">18:00</div>
+      <h2>clock-out?</h2>
+      <p>The day is done. Head home?</p>
+      <div class="clockout-actions">
+        <button id="clockOutYes" class="btn btn-primary" type="button">yes, clock out</button>
+        <button id="clockOutNo" class="btn btn-ghost" type="button">not yet</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js?v=9"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
-import { CHAR_W, CHAR_H, SHEET_COLS, DIR_ROW, DIFFICULTY } from '../core/config.js';
-import { state } from '../core/state.js';
-import { CHARACTERS } from '../art/palette.js';
-import { sheetFor } from '../art/characters.js';
-import { sfx } from '../core/audio.js';
+import { CHAR_W, CHAR_H, SHEET_COLS, DIR_ROW } from '../core/config.js?v=8';
+import { state } from '../core/state.js?v=8';
+import { CHARACTERS } from '../art/palette.js?v=8';
+import { sheetFor } from '../art/characters.js?v=8';
+import { sfx } from '../core/audio.js?v=8';
 
 // The picker is a personnel file. The hero is the full-length cut-out taken
 // from each colleague's own model sheet, standing in a studio tinted with their
@@ -23,7 +23,6 @@ const FACING_LABEL = {
 
 let page = 1;
 let confirmCb = () => {};
-let difficultyCb = () => {};
 let raf = 0;
 let frameTick = 0;
 let ctx = null;
@@ -226,31 +225,12 @@ export function open() {
   start();
 }
 
-export function bind({ onConfirm, onDifficulty, difficulty }) {
+export function bind({ onConfirm }) {
   confirmCb = onConfirm;
-  difficultyCb = onDifficulty;
 
   ctx = el('charCanvas').getContext('2d');
   ctx.imageSmoothingEnabled = false;
   buildRail();
-
-  const shift = el('pickDifficulty');
-  shift.textContent = '';
-  for (const [key, d] of Object.entries(DIFFICULTY)) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'chip';
-    b.dataset.key = key;
-    b.textContent = d.label;
-    b.title = `${d.daySeconds}s day`;
-    b.addEventListener('click', () => {
-      difficultyCb(key);
-      syncDifficulty(key);
-      sfx.ui();
-    });
-    shift.append(b);
-  }
-  syncDifficulty(difficulty);
 
   el('prevBtn').addEventListener('click', () => step(-1));
   el('nextBtn').addEventListener('click', () => step(1));
@@ -295,13 +275,4 @@ export function bind({ onConfirm, onDifficulty, difficulty }) {
   window.addEventListener('click', (e) => {
     if (e.target === popup()) { sfx.back(); close(); }
   });
-}
-
-export function syncDifficulty(key) {
-  for (const b of el('pickDifficulty').children) {
-    b.classList.toggle('is-on', b.dataset.key === key);
-  }
-  const d = DIFFICULTY[key];
-  el('pickShiftNote').textContent =
-    `${d.label} shift · ${Math.round(d.daySeconds / 60 * 10) / 10} min real time · 09:00 to 17:00`;
 }

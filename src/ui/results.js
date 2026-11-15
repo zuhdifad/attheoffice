@@ -1,79 +1,110 @@
-import { SCREEN_W, SCREEN_H } from '../core/config.js';
-import { text, px, vgrad } from '../core/draw.js';
-import { PAL } from '../art/palette.js';
-import { portraitFor } from '../art/characters.js';
+import { SCREEN_W, SCREEN_H } from '../core/config.js?v=8';
+import { text, px } from '../core/draw.js?v=8';
+import { bustFor } from '../art/characters.js?v=8';
 
-// The end-of-day report, drawn into the same buffer as the room so it inherits
-// the pixel grid and the vignette. The room keeps living behind it — colleagues
-// still wander — which is what stops the day feeling like a hard cut.
+// The clock-out receipt, drawn into the same buffer as the room so it inherits
+// the pixel grid. Parchment, like the conversation box: the day ends the same
+// way it was spoken. The room keeps living behind it — colleagues still wander
+// — which is what stops the visit feeling like a hard cut.
+
+const INK = '#3a2c1a';
+const BORDER = '#5a4632';
+const FAINT = '#8a7454';
+const PARCH = '#f7efd3';
+const PARCH_HI = '#fbf6e4';
+const PARCH_LO = '#e8dcb8';
+const GREEN = '#3fae4a';
+
+const TWO = (n) => String(n).padStart(2, '0');
+const clock = (d) => `${TWO(d.getHours())}:${TWO(d.getMinutes())}:${TWO(d.getSeconds())}`;
+const date = (d) => `${TWO(d.getDate())}/${TWO(d.getMonth() + 1)}/${d.getFullYear()}`;
+
+function spent(a, b) {
+  const s = Math.max(0, Math.round((b - a) / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h) return `${h}h ${TWO(m)}m`;
+  return `${m}m ${TWO(s % 60)}s`;
+}
+
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
 export function drawResults(g, state, reveal) {
   const r = state.result;
   if (!r) return;
   const a = Math.min(1, reveal / 26);
 
   g.save();
-  g.globalAlpha = a * 0.82;
+  g.globalAlpha = a * 0.62;
   px(g, 0, 0, SCREEN_W, SCREEN_H, '#0a0d13');
   g.restore();
 
-  const w = 320;
-  const h = 208;
+  const w = 300;
+  const h = 198;
   const x = Math.round(SCREEN_W / 2 - w / 2);
   const y = Math.round(SCREEN_H / 2 - h / 2 + (1 - a) * 14);
-  const accent = r.cleared ? PAL.ok : PAL.danger;
 
   g.save();
   g.globalAlpha = a;
 
-  px(g, x + 3, y + 4, w, h, 'rgba(0,0,0,0.45)');
-  vgrad(g, x, y, w, h, [[0, '#1a1f2b'], [0.5, '#151a24'], [1, '#10141c']]);
-  px(g, x, y, w, 2, accent);
-  px(g, x, y + h - 1, w, 1, 'rgba(0,0,0,0.6)');
-  px(g, x, y, 1, h, 'rgba(255,255,255,0.06)');
-  px(g, x + w - 1, y, 1, h, 'rgba(0,0,0,0.4)');
+  // Soft shadow, parchment body, brown border, inner bevel.
+  roundRect(g, x + 2, y + 3, w, h, 6);
+  g.fillStyle = 'rgba(10,8,4,0.45)';
+  g.fill();
+  roundRect(g, x, y, w, h, 6);
+  g.fillStyle = PARCH;
+  g.fill();
+  g.lineWidth = 2;
+  g.strokeStyle = BORDER;
+  g.stroke();
+  roundRect(g, x + 2, y + 2, w - 4, h - 4, 5);
+  g.lineWidth = 1;
+  g.strokeStyle = PARCH_HI;
+  g.stroke();
+  px(g, x + 3, y + h - 3, w - 6, 1, PARCH_LO);
 
-  text(g, r.cleared ? 'SHIFT COMPLETE' : 'OVERTIME', x + 14, y + 20, accent, 'left', 10, 'rgba(0,0,0,0.6)');
-  text(g, `${r.difficulty.toUpperCase()} · CLOCKED ${r.clock}`, x + w - 14, y + 19, PAL.textFaint, 'right', 7);
-  px(g, x + 14, y + 27, w - 28, 1, 'rgba(255,255,255,0.09)');
+  text(g, 'CLOCKED OUT', x + 14, y + 19, INK, 'left', 10);
+  text(g, date(r.outAt), x + w - 14, y + 18, FAINT, 'right', 7);
+  px(g, x + 14, y + 26, w - 28, 1, PARCH_LO);
 
-  // The worker, at picker scale, beside the rank they earned.
-  const port = portraitFor(state.chosen.id);
-  if (port) {
-    px(g, x + 14, y + 36, 52, 74, 'rgba(255,255,255,0.04)');
-    px(g, x + 14, y + 36, 52, 1, state.chosen.tint);
-    g.drawImage(port, 0, 0, 64, 96, x + 16, y + 38, 48, 72);
-  }
+  // The worker, framed like the dialogue bust, beside their record.
+  const PX = x + 14, PY = y + 36, PS = 46;
+  px(g, PX, PY, PS, PS, PARCH_HI);
+  g.lineWidth = 2;
+  g.strokeStyle = BORDER;
+  g.strokeRect(PX + 1, PY + 1, PS - 2, PS - 2);
+  const bust = bustFor(state.chosen.id);
+  if (bust) g.drawImage(bust, 0, 0, bust.width, bust.height, PX + 4, PY + 4, PS - 8, PS - 8);
 
-  text(g, state.chosen.name.toUpperCase(), x + 76, y + 48, PAL.text, 'left', 9, 'rgba(0,0,0,0.6)');
-  text(g, state.chosen.role, x + 76, y + 59, PAL.textFaint, 'left', 7);
-  text(g, r.title.toUpperCase(), x + 76, y + 80, PAL.amber, 'left', 12, 'rgba(0,0,0,0.6)');
-  text(g, r.note, x + 76, y + 93, PAL.textDim, 'left', 7);
-  text(g, `${r.done}/${r.total} objectives closed`, x + 76, y + 106, r.cleared ? PAL.ok : PAL.warn, 'left', 7);
+  text(g, state.chosen.name.toUpperCase(), x + 72, y + 48, INK, 'left', 9);
+  text(g, state.chosen.role, x + 72, y + 60, FAINT, 'left', 7);
+  text(g, state.floor || 'The office', x + 72, y + 72, GREEN, 'left', 7);
 
-  // Score counts up rather than appearing, so the number is an event.
-  const shown = Math.round(r.score * Math.min(1, Math.max(0, (reveal - 14) / 40)));
-  px(g, x + 14, y + 118, w - 28, 1, 'rgba(255,255,255,0.09)');
-  text(g, 'FINAL SCORE', x + 14, y + 132, PAL.textFaint, 'left', 7);
-  text(g, String(shown), x + w - 14, y + 136, PAL.amber, 'right', 18, 'rgba(0,0,0,0.6)');
-
-  const stats = [
-    ['SYNC HITS', String(r.perfect), PAL.tealLit],
-    ['BEST STREAK', `×${r.bestCombo}`, PAL.grape],
-    ['EARLY BONUS', `+${r.early}`, PAL.ok],
-    ['STEPS', String(r.steps), PAL.sky]
+  const rows = [
+    ['CLOCKED IN', clock(r.inAt)],
+    ['CLOCKED OUT', clock(r.outAt)],
+    ['ON THE FLOOR', spent(r.inAt, r.outAt)],
+    ['STEPS', String(r.steps)],
+    ['COLLEAGUES MET', `${r.talks}/${r.total}`]
   ];
-  const cw = (w - 28) / stats.length;
-  stats.forEach(([label, value, color], i) => {
-    const sx = x + 14 + i * cw;
-    px(g, sx, y + 146, cw - 6, 26, 'rgba(255,255,255,0.04)');
-    px(g, sx, y + 146, cw - 6, 1, color);
-    text(g, value, sx + (cw - 6) / 2, y + 160, color, 'center', 9, 'rgba(0,0,0,0.5)');
-    text(g, label, sx + (cw - 6) / 2, y + 169, PAL.textFaint, 'center', 6);
+  rows.forEach(([label, value], i) => {
+    const ry = y + 98 + i * 13;
+    text(g, label, x + 14, ry, FAINT, 'left', 7);
+    text(g, value, x + w - 14, ry, INK, 'right', 8);
   });
 
+  px(g, x + 14, y + 164, w - 28, 1, PARCH_LO);
   const blink = Math.floor(state.tick / 24) % 2 === 0;
-  text(g, 'R  RUN IT AGAIN', x + w / 2, y + 190, blink ? PAL.text : PAL.textDim, 'center', 8, 'rgba(0,0,0,0.6)');
-  text(g, 'C  CHANGE WORKER', x + w / 2, y + 201, PAL.textFaint, 'center', 6);
+  text(g, 'R  BACK TO THE FLOOR', x + w / 2, y + 178, blink ? INK : FAINT, 'center', 8);
+  text(g, 'C  CHANGE WORKER', x + w / 2, y + 190, FAINT, 'center', 6);
 
   g.restore();
 }

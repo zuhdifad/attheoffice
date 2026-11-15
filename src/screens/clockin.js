@@ -1,4 +1,4 @@
-import { initAudio, sfx } from '../core/audio.js';
+import { initAudio, sfx } from '../core/audio.js?v=8';
 
 // The title card hands over to a short loading plate — FIGHTING — and then to the
 // two questions the floor asks before it issues a badge: a name, and the level
@@ -10,13 +10,11 @@ export function bind({ onStartToWork }) {
   const startBtn = document.getElementById('clockInBtn');
   const loader = document.getElementById('bootLoad');
   const popup = document.getElementById('popup');
-  const stepLabel = document.getElementById('enlistStep');
   const stageWho = document.getElementById('stageWho');
   const stageWhere = document.getElementById('stageWhere');
   const whoForm = document.getElementById('whoForm');
   const whoInput = document.getElementById('whoInput');
   const whoError = document.getElementById('whoError');
-  const whereSub = document.getElementById('whereSub');
   const backBtn = document.getElementById('whereBack');
   const floors = Array.from(document.querySelectorAll('#floorPick [data-floor]'));
 
@@ -27,7 +25,6 @@ export function bind({ onStartToWork }) {
     const who = stage === 'who';
     stageWho.classList.toggle('is-on', who);
     stageWhere.classList.toggle('is-on', !who);
-    stepLabel.textContent = who ? '01 / 02' : '02 / 02';
     // Focus lands on whatever the stage is asking for, so a keyboard player
     // never has to hunt for it.
     requestAnimationFrame(() => (who ? whoInput : floors[0]).focus());
@@ -35,10 +32,7 @@ export function bind({ onStartToWork }) {
 
   const close = () => { popup.style.display = 'none'; };
 
-  const askWhere = () => {
-    whereSub.textContent = `Badge ready for ${name}. Pick the level your desk sits on.`;
-    showStage('where');
-  };
+  const askWhere = () => showStage('where');
 
   // Opening the floor is deliberately a two-second beat: the guard stops a
   // second Enter from stacking a second loader on top of the first.

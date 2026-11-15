@@ -11,6 +11,13 @@ export const VIEW_H = 9;
 export const SCREEN_W = TILE * VIEW_W;
 export const SCREEN_H = TILE * VIEW_H;
 
+// The world is drawn with a subtle vertical foreshortening so a floor square
+// reads wider than it is tall, the fixed 3/4 oblique of the PS1 reference. The
+// camera and the cull therefore look at a slightly taller slice of world than
+// the buffer is high; the scale is applied once, around the whole world pass.
+export const WORLD_SY = 0.9;
+export const VIEW_PX_H = Math.ceil(SCREEN_H / WORLD_SY);
+
 export const ZOOM_MIN = 1;
 export const ZOOM_MAX = 6;
 
@@ -33,14 +40,3 @@ export const ATLAS_COLS = 8;
 export const ATLAS_CELL_W = 32;
 export const ATLAS_CELL_H = 48;
 export const ATLAS_HEADROOM = ATLAS_CELL_H - TILE;
-
-// The workday. Three pressures, one clock. `bonus` scales the reward for
-// finishing early, so the harder shift is worth more of the same clock.
-export const DIFFICULTY = {
-  chill: { label: 'Chill', daySeconds: 240, workFrames: 66, bonus: 0.8 },
-  normal: { label: 'Normal', daySeconds: 180, workFrames: 84, bonus: 1.0 },
-  crunch: { label: 'Crunch', daySeconds: 135, workFrames: 102, bonus: 1.35 }
-};
-
-export const DAY_START = 9 * 60;      // 09:00, in minutes
-export const DAY_END = 17 * 60;       // 17:00

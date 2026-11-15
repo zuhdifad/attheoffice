@@ -1,5 +1,5 @@
-import { TILE, VIEW_W, VIEW_H, SCREEN_W, SCREEN_H } from '../core/config.js';
-import { vignette } from '../art/backdrop.js';
+import { TILE, VIEW_W, VIEW_H, SCREEN_W, SCREEN_H } from '../core/config.js?v=8';
+import { vignette } from '../art/backdrop.js?v=8';
 
 // Post pass: daylight out of the north glazing, the warm lift the phone booth
 // throws, then a vignette that pulls the eye to the middle of the room.
@@ -27,7 +27,7 @@ function visible(state, ids) {
   return out;
 }
 
-const SOURCES = new Set(['W', 'j']);
+const SOURCES = new Set(['W']);
 
 export function drawLight(g, state) {
   const src = visible(state, SOURCES);
@@ -76,35 +76,38 @@ export function drawLight(g, state) {
   g.restore();
 }
 
-// The day darkens as it goes: a cool morning wash sliding to amber by 17:00.
-// Cheap — one flat fill over the whole 480x288 buffer.
+// The day darkens as it goes: a cool morning wash, then full daylight held
+// until late afternoon so the floor stays as bright as the reference, and
+// only the last hours of the shift sliding amber. Cheap — one flat fill over
+// the whole 480x288 buffer.
 export function drawTimeOfDay(g, t) {
   if (t <= 0.02) return;
-  const warm = Math.max(0, (t - 0.55) / 0.45);
+  const warm = Math.max(0, (t - 0.72) / 0.28);
   const cool = Math.max(0, 1 - t * 2.2);
   g.save();
   if (cool > 0) {
-    g.fillStyle = `rgba(120,164,206,${(cool * 0.10).toFixed(3)})`;
+    g.fillStyle = `rgba(120,164,206,${(cool * 0.06).toFixed(3)})`;
     g.fillRect(0, 0, SCREEN_W, SCREEN_H);
   }
   if (warm > 0) {
-    g.fillStyle = `rgba(226,140,60,${(warm * 0.15).toFixed(3)})`;
+    g.fillStyle = `rgba(226,140,60,${(warm * 0.13).toFixed(3)})`;
     g.fillRect(0, 0, SCREEN_W, SCREEN_H);
     g.globalCompositeOperation = 'multiply';
-    g.fillStyle = `rgba(150,150,170,${(warm * 0.20).toFixed(3)})`;
+    g.fillStyle = `rgba(150,150,170,${(warm * 0.12).toFixed(3)})`;
     g.fillRect(0, 0, SCREEN_W, SCREEN_H);
   }
   g.restore();
 }
 
 export function drawGrade(g, alpha = 1) {
-  // The stone floor is authored very light. One gentle multiply brings it back
-  // to the weight it has in the plate and gives the props somewhere to sit.
+  // Daylight, not tungsten: the floor stays bright, warm and saturated like the
+  // reference. One very light warm multiply seats the props without grey-ing
+  // the beige, and the vignette is kept gentle so the room reads open.
   g.save();
   g.globalCompositeOperation = 'multiply';
-  g.fillStyle = 'rgba(196,203,214,1)';
-  g.globalAlpha = 0.34;
+  g.fillStyle = 'rgba(255,238,208,1)';
+  g.globalAlpha = 0.14;
   g.fillRect(0, 0, SCREEN_W, SCREEN_H);
   g.restore();
-  vignette(g, alpha);
+  vignette(g, alpha * 0.55);
 }

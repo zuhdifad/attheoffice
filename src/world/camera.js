@@ -1,14 +1,15 @@
-import { TILE, SCREEN_W, SCREEN_H } from '../core/config.js';
+import { TILE, SCREEN_W, VIEW_PX_H } from '../core/config.js?v=8';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 // Where the camera wants to be: centred on the player, then pinned inside the
-// map so no void shows at the edges.
+// map so no void shows at the edges. The vertical slice is the foreshortened
+// world height, not the buffer height, because the world pass is scaled in Y.
 function target(state) {
   const p = state.player;
   return {
     x: clamp(p.px + TILE / 2 - SCREEN_W / 2, 0, state.map.w * TILE - SCREEN_W),
-    y: clamp(p.py + TILE / 2 - SCREEN_H / 2, 0, state.map.h * TILE - SCREEN_H)
+    y: clamp(p.py + TILE / 2 - VIEW_PX_H / 2, 0, state.map.h * TILE - VIEW_PX_H)
   };
 }
 

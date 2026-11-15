@@ -15,7 +15,11 @@ let enabled = false;
 // know which one produced an input.
 let padDir = null;
 let padWork = false;
-let syncTaps = 0;
+// Edge counters, consumed once per simulated frame. workTap is the press that
+// opens a conversation; confirmTap advances a dialogue page (E / Space / Enter
+// / click / tap all fold into it). Holding E never re-triggers either.
+let workTaps = 0;
+let confirmTaps = 0;
 
 export function setInputEnabled(on) {
   enabled = on;
@@ -24,7 +28,8 @@ export function setInputEnabled(on) {
   ORDER.length = 0;
   padDir = null;
   padWork = false;
-  syncTaps = 0;
+  workTaps = 0;
+  confirmTaps = 0;
 }
 
 export function setPadDirection(dir) {
@@ -32,11 +37,13 @@ export function setPadDirection(dir) {
 }
 
 export function setPadWork(on) {
+  if (on && !padWork) { workTaps++; confirmTaps++; }
   padWork = on;
 }
 
-export function tapSync() {
-  syncTaps++;
+// A click or tap on the canvas talks, or advances dialogue, just like a key.
+export function tapConfirm() {
+  confirmTaps++;
 }
 
 window.addEventListener('keydown', (e) => {
@@ -44,11 +51,17 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === ' ' || k === 'spacebar') {
     e.preventDefault();
-    if (!e.repeat) syncTaps++;
+    if (!e.repeat) confirmTaps++;
+    return;
+  }
+  if (k === 'enter') {
+    e.preventDefault();
+    if (!e.repeat) confirmTaps++;
     return;
   }
   if (k === 'e') {
     e.preventDefault();
+    if (!e.repeat) { workTaps++; confirmTaps++; }
     HELD.add('e');
     return;
   }
@@ -73,6 +86,8 @@ window.addEventListener('blur', () => {
   ORDER.length = 0;
   padDir = null;
   padWork = false;
+  workTaps = 0;
+  confirmTaps = 0;
 });
 
 // FireRed walks whichever direction you pressed last, so press order beats
@@ -86,9 +101,13 @@ export function heldDirection() {
 }
 
 // Read once per simulated frame: the tap is consumed so one press can never
-// score twice, and holding Space does nothing at all.
+// open two conversations, and holding a key does nothing at all.
 export function readActions() {
-  const a = { work: HELD.has('e') || padWork, syncTap: syncTaps > 0 };
-  syncTaps = 0;
+  const a = {
+    workTap: workTaps > 0,
+    confirmTap: confirmTaps > 0
+  };
+  workTaps = 0;
+  confirmTaps = 0;
   return a;
 }

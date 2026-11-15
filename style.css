@@ -1,5 +1,5 @@
 /* ============================================================================
-   DEF PROJECT — a workday
+   At the Office — a walk around the floor
    Palette lifted off the tileset: teal carpet carries the fields, the yellow
    booth is the loud accent, wood and terrazzo are the warm neutrals, glazing
    and the blue chair are the cool ones. Nothing here is a default grey.
@@ -343,14 +343,6 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
   animation: popIn .28s cubic-bezier(.2, .9, .25, 1) both;
 }
 @keyframes popIn { from { opacity: 0; transform: translateY(14px) scale(.98); } }
-.popup-content::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  border-radius: 10px 10px 0 0;
-  background: linear-gradient(90deg, var(--teal-lit), var(--amber), var(--coral));
-}
 .popup-content h2 {
   font-family: var(--display);
   font-size: 15px;
@@ -426,39 +418,11 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
 
 /* enlist — the two questions the floor asks before it hands over a badge */
 .enlist { width: min(460px, 100%); }
-.enlist-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.enlist-step {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .24em;
-  color: var(--text-faint);
-}
-.enlist-badge {
-  font-size: 9px;
-  letter-spacing: .2em;
-  color: var(--amber);
-  border: 1px dashed rgba(242, 177, 52, .5);
-  border-radius: 4px;
-  padding: 5px 8px;
-}
 
 /* one stage at a time, so the card never asks two things at once */
 .enlist-stage { display: none; }
 .enlist-stage.is-on { display: block; animation: stageIn .26s cubic-bezier(.2, .9, .25, 1) both; }
 @keyframes stageIn { from { opacity: 0; transform: translateY(8px); } }
-
-.enlist-sub {
-  margin-top: 10px;
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--text-dim);
-}
 
 .who-form { display: grid; gap: 12px; margin-top: 20px; }
 .who-input {
@@ -545,7 +509,6 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
    hero, the live sprite beside it proves it is the same colleague, and the
    whole floor sits underneath as thirteen faces you can click. */
 .picker { --tint: var(--sky); width: min(820px, 100%); }
-.picker::before { background: linear-gradient(90deg, var(--tint), var(--amber)); }
 .picker-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
 .picker-sub { margin-top: 9px; font-size: 11px; line-height: 1.65; color: var(--text-faint); max-width: 64ch; }
 .page-info { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; padding-top: 4px; }
@@ -772,11 +735,6 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
 .nav-buttons { display: flex; justify-content: center; gap: 12px; margin: 10px 0 14px; }
 .nav-btn { font-size: 10px; padding: 11px 18px; }
 
-.shift-pick {
-  border-top: 1px solid rgba(255, 255, 255, .08);
-  padding-top: 14px;
-  margin-bottom: 16px;
-}
 .field-label {
   display: block;
   font-size: 10px;
@@ -787,28 +745,6 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
   margin-bottom: 9px;
 }
 .field-label b { color: var(--teal-lit); letter-spacing: .04em; }
-.chips { display: flex; gap: 8px; }
-.chip {
-  flex: 1;
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, .04);
-  border: 1px solid rgba(255, 255, 255, .10);
-  border-radius: 5px;
-  padding: 10px 8px;
-  cursor: pointer;
-  transition: all .16s ease;
-}
-.chip:hover { color: var(--text); border-color: rgba(43, 163, 176, .55); }
-.chip.is-on {
-  color: #221703;
-  background: linear-gradient(180deg, #ffcb5c, var(--amber));
-  border-color: transparent;
-  box-shadow: 0 4px 14px rgba(242, 177, 52, .28);
-}
-.shift-note { margin-top: 11px; font-size: 11px; color: var(--text-faint); }
 
 /* ================================================================== GAME */
 .game-area {
@@ -837,22 +773,60 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
   border-bottom: 1px solid rgba(255, 255, 255, .07);
   background: rgba(15, 19, 27, .9);
 }
-.brand { font-family: var(--display); font-size: 12px; color: var(--text); letter-spacing: .02em; }
-.brand i { color: var(--amber); font-style: normal; margin-left: 6px; }
-.game-sub { font-size: 11px; color: var(--text-faint); letter-spacing: .1em; text-transform: uppercase; }
-.game-top-right { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
-.pill {
-  font-size: 11px;
-  color: var(--text-faint);
-  background: rgba(255, 255, 255, .05);
-  border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: 999px;
-  padding: 5px 12px;
-  white-space: nowrap;
+/* The header is the wall clock: real device time, the date, and whether you
+   are clocked in. Nothing else lives up here. */
+.clock-top { justify-content: space-between; }
+
+.wall-clock { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; min-width: 0; }
+.wall-time {
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: .04em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .55), 0 0 26px rgba(43, 163, 176, .22);
 }
-.pill b { color: var(--text); font-weight: 600; }
-.pill-score b { color: var(--amber); }
-.pill-combo b { color: var(--grape); }
+.wall-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.wall-date {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.wall-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ok);
+}
+.wall-state .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 9px rgba(79, 212, 138, .85);
+  animation: dotPulse 2.2s ease-in-out infinite;
+}
+.wall-state.is-out { color: var(--amber); }
+.wall-state.is-out .dot { background: var(--amber); box-shadow: 0 0 9px rgba(242, 177, 52, .7); animation: none; }
+@keyframes dotPulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+/* The offer stays on the table after 18:00 once the question is declined. */
+.clock-out-btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  border-color: rgba(242, 177, 52, .55);
+  animation: popIn .3s cubic-bezier(.2, .9, .25, 1) both;
+}
+.clock-out-btn:hover { background: rgba(242, 177, 52, .16); color: #ffd873; border-color: var(--amber); }
 
 .stage {
   grid-area: stage;
@@ -902,57 +876,6 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
   letter-spacing: .02em;
 }
 .rail-hint { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
-.rail-clock { font-size: 15px; font-weight: 600; color: var(--teal-lit); font-variant-numeric: tabular-nums; }
-
-.day-track { height: 4px; border-radius: 3px; background: rgba(255, 255, 255, .09); overflow: hidden; margin-bottom: 12px; }
-.day-track i {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: linear-gradient(90deg, var(--teal), var(--teal-lit));
-  transition: width .2s linear;
-}
-.day-track i.is-late { background: linear-gradient(90deg, var(--amber), var(--danger)); }
-
-.task-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
-.task {
-  --fill: 0%;
-  position: relative;
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 9px;
-  border-radius: 5px;
-  border: 1px solid transparent;
-  background:
-    linear-gradient(90deg, rgba(43, 163, 176, .18) var(--fill), transparent var(--fill)),
-    rgba(255, 255, 255, .022);
-  transition: background .18s, border-color .18s, opacity .18s;
-}
-.task-mark {
-  display: grid;
-  place-items: center;
-  width: 20px; height: 20px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-faint);
-  background: rgba(255, 255, 255, .06);
-  border-radius: 4px;
-}
-.task-body { min-width: 0; }
-.task-name { display: block; font-size: 12px; font-weight: 500; color: var(--text-dim); line-height: 1.35; }
-.task-hint { display: block; font-size: 10px; color: var(--text-faint); margin-top: 2px; }
-.task-pts { font-size: 10px; font-weight: 600; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-
-.task.is-active { border-color: rgba(242, 177, 52, .55); background-color: rgba(242, 177, 52, .07); }
-.task.is-active .task-mark { background: var(--amber); color: #221703; }
-.task.is-active .task-name { color: var(--text); }
-.task.is-active .task-pts { color: var(--amber); }
-.task.is-done { opacity: .58; }
-.task.is-done .task-mark { background: rgba(79, 212, 138, .2); color: var(--ok); }
-.task.is-done .task-name { text-decoration: line-through; text-decoration-color: rgba(79, 212, 138, .6); }
-.task.is-done .task-pts { color: var(--ok); }
 
 .map-wrap {
   border-radius: 6px;
@@ -1072,6 +995,57 @@ input[type="range"]::-moz-range-thumb {
 }
 .game-foot span { display: inline-flex; align-items: center; gap: 6px; }
 
+/* ------------------------------------------------------- clock-out question */
+/* After 18:00 the floor asks once, in the middle of everything, on the same
+   parchment the conversations are written on. */
+.clockout-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--scrim);
+  backdrop-filter: blur(10px) saturate(.85);
+}
+.clockout-modal[hidden] { display: none; }
+
+.clockout-card {
+  width: min(380px, 100%);
+  text-align: center;
+  color: #3a2c1a;
+  background: linear-gradient(180deg, #f9f2da, #f1e6c4);
+  border: 2px solid #5a4632;
+  border-radius: 10px;
+  padding: 26px 26px 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .6), inset 0 1px 0 #fffbe9;
+  animation: popIn .28s cubic-bezier(.2, .9, .25, 1) both;
+}
+.clockout-time {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: .04em;
+  color: #5a4632;
+  font-variant-numeric: tabular-nums;
+}
+.clockout-card h2 {
+  margin-top: 14px;
+  font-family: var(--display);
+  font-size: 15px;
+  line-height: 1.5;
+  color: #3a2c1a;
+}
+.clockout-card p { margin-top: 10px; font-size: 12px; line-height: 1.7; color: #6b5a41; }
+.clockout-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+.clockout-actions .btn-primary { font-size: 10px; padding: 12px 16px; }
+.clockout-actions .btn-ghost {
+  font-size: 11px;
+  color: #5a4632;
+  background: rgba(90, 70, 50, .08);
+  border-color: rgba(90, 70, 50, .35);
+}
+.clockout-actions .btn-ghost:hover { background: rgba(90, 70, 50, .16); color: #3a2c1a; border-color: #5a4632; }
+
 /* --------------------------------------------------------------- touch pad */
 .touch-pad { display: none; }
 
@@ -1081,7 +1055,7 @@ input[type="range"]::-moz-range-thumb {
   .stage { grid-template-rows: minmax(0, 1fr) auto; row-gap: 8px; }
   .touch-pad {
     display: grid;
-    grid-template-columns: repeat(3, 52px) 1fr 68px 68px;
+    grid-template-columns: repeat(3, 52px) 1fr 84px;
     grid-template-rows: repeat(2, 44px);
     gap: 6px;
     width: 100%;
@@ -1106,13 +1080,11 @@ input[type="range"]::-moz-range-thumb {
   .pad.down { grid-column: 2; grid-row: 2; }
   .pad.right { grid-column: 3; grid-row: 2; }
   .pad.act { grid-column: 5; grid-row: 1 / span 2; background: rgba(242, 177, 52, .28); border-color: var(--amber); }
-  .pad.sync { grid-column: 6; grid-row: 1 / span 2; background: rgba(139, 122, 214, .28); border-color: var(--grape); }
 }
 
 /* ------------------------------------------------------------- responsive */
 @media (max-width: 1040px) {
   :root { --rail-w: 280px; }
-  .game-sub { display: none; }
 }
 
 @media (max-width: 900px) {
@@ -1149,15 +1121,14 @@ input[type="range"]::-moz-range-thumb {
   .floor-btn { font-size: 10px; padding: 14px 14px; }
   .popup-content { padding: 20px 16px; }
   .game-top { gap: 10px; padding: 10px 12px; padding-right: 60px; }
-  .pill { font-size: 10px; padding: 4px 9px; }
-  /* The streak already reads in the room HUD and in the rail, so the header
-     drops it rather than wrapping onto a second line. */
-  .pill-combo { display: none; }
+  .wall-time { font-size: 14px; }
+  .wall-clock { gap: 10px; }
+  .wall-meta { gap: 10px; }
   .rail-controls { grid-template-columns: 1fr; }
   .popup-content h2 { font-size: 13px; }
   /* The sound dock is fixed over the top-right corner; the popup heads keep
      clear of it rather than running underneath. */
-  .picker-head, .enlist-head { padding-right: 50px; }
+  .picker-head { padding-right: 50px; }
   .picker-head { gap: 8px; }
   .picker-sub { font-size: 10.5px; }
   .char-card { padding: 14px 13px; }
@@ -1195,7 +1166,6 @@ input[type="range"]::-moz-range-thumb {
   .rail-pick { margin-top: 12px; }
   .char-rail { padding: 2px 2px 8px; }
   .nav-buttons { margin: 8px 0 10px; }
-  .shift-pick { padding-top: 12px; margin-bottom: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

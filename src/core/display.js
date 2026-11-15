@@ -1,4 +1,4 @@
-import { SCREEN_W, SCREEN_H, ZOOM_MIN, ZOOM_MAX } from './config.js';
+import { SCREEN_W, SCREEN_H, ZOOM_MIN, ZOOM_MAX } from './config.js?v=8';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 

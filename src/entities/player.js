@@ -1,5 +1,5 @@
-import { TILE, STEP_FRAMES } from '../core/config.js';
-import { frameFor } from '../art/characters.js';
+import { TILE, STEP_FRAMES } from '../core/config.js?v=8';
+import { frameFor } from '../art/characters.js?v=8';
 
 const DELTA = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
@@ -14,7 +14,7 @@ export function createPlayer(x, y, who) {
     to: null,
     px: x * TILE,
     py: y * TILE,
-    dir: 'up',
+    dir: 'down',
     frame: 0,
     moving: false,
     step: 0,

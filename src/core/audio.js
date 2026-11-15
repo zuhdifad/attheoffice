@@ -134,6 +134,17 @@ export const sfx = {
   key() {
     noiseHit({ dur: 0.03, gain: 0.05, freq: 2400 + Math.random() * 900, q: 3 });
   },
+  // The dialogue typewriter: a soft two-pixel blip, pitched per speaker so a
+  // conversation reads as a voice without any recorded audio.
+  blip(pitch = 1) {
+    tone({ freq: 520 * pitch, to: 640 * pitch, type: 'square', dur: 0.03, gain: 0.035 });
+  },
+  talk() {
+    tone({ freq: 392, to: 523, type: 'triangle', dur: 0.07, gain: 0.06 });
+  },
+  talkClose() {
+    tone({ freq: 523, to: 392, type: 'triangle', dur: 0.07, gain: 0.05 });
+  },
   sync() {
     tone({ freq: 880, to: 1760, type: 'triangle', dur: 0.14, gain: 0.14 });
     tone({ freq: 1320, type: 'sine', dur: 0.18, gain: 0.08, delay: 0.03 });
@@ -149,6 +160,13 @@ export const sfx = {
   clockIn() {
     tone({ freq: 392, type: 'square', dur: 0.10, gain: 0.10 });
     tone({ freq: 587, type: 'square', dur: 0.16, gain: 0.10, delay: 0.09 });
+  },
+  // The reverse of the clock-in chime: two notes stepping down, then a low
+  // triangle that lets the room go quiet.
+  clockOut() {
+    tone({ freq: 587, type: 'square', dur: 0.10, gain: 0.09 });
+    tone({ freq: 392, type: 'square', dur: 0.16, gain: 0.09, delay: 0.10 });
+    tone({ freq: 262, type: 'triangle', dur: 0.34, gain: 0.06, delay: 0.24 });
   },
   win() {
     [523, 659, 784, 1046, 1318].forEach((f, i) => {

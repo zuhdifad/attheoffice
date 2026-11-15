@@ -1,4 +1,4 @@
-import { TILE } from './config.js';
+import { TILE } from './config.js?v=8';
 
 // Every pixel in the game is authored through these helpers, so the
 // no-smoothing rule only has to be written once.

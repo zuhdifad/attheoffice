@@ -1,11 +1,12 @@
-import { TILE, CHAR_H, VIEW_W, VIEW_H, SCREEN_W, SCREEN_H } from '../core/config.js';
-import { isObject, blitCell, atlasImage } from '../art/tiles.js';
-import { PAL } from '../art/palette.js';
-import { drawChar } from '../art/characters.js';
-import { text, px } from '../core/draw.js';
-import { drawLight, drawGrade, drawTimeOfDay } from './lighting.js';
-import { drawFx } from './fx.js';
-import { activeTask, dayProgress } from '../game/day.js';
+import { TILE, CHAR_H, VIEW_W, SCREEN_W, SCREEN_H, WORLD_SY, VIEW_PX_H } from '../core/config.js?v=8';
+import { isObject, blitCell, atlasImage } from '../art/tiles.js?v=8';
+import { PAL } from '../art/palette.js?v=8';
+import { drawChar } from '../art/characters.js?v=8';
+import { text, px } from '../core/draw.js?v=8';
+import { drawLight, drawGrade, drawTimeOfDay } from './lighting.js?v=8';
+import { drawFx } from './fx.js?v=8';
+import { nearestTalkable } from '../ui/dialogue.js?v=8';
+import { now } from '../ui/wallclock.js?v=8';
 
 const LIFT = CHAR_H - TILE;
 
@@ -26,11 +27,19 @@ export function drawWorld(g, state) {
   g.fillRect(0, 0, SCREEN_W, SCREEN_H);
   if (!atlas) return;
 
+  // The whole world pass is drawn into a vertically foreshortened slice so a
+  // floor square reads wider than tall — the fixed 3/4 oblique of the reference.
+  // Lighting that belongs to the room rides inside the same transform; the
+  // full-screen grade and time wash are applied afterwards, in screen space.
+  g.save();
+  g.scale(1, WORLD_SY);
+
   const x0 = Math.floor(rcam.x / TILE);
   const y0 = Math.floor(rcam.y / TILE);
+  const rows = Math.ceil(VIEW_PX_H / TILE) + 1;
   const stacked = [];
 
-  for (let y = y0; y <= y0 + VIEW_H; y++) {
+  for (let y = y0; y <= y0 + rows; y++) {
     for (let x = x0; x <= x0 + VIEW_W; x++) {
       if (x < 0 || y < 0 || x >= map.w || y >= map.h) continue;
       const id = map.get(x, y);
@@ -43,14 +52,14 @@ export function drawWorld(g, state) {
     }
   }
 
-  if (state.grid) drawGrid(g, rcam, x0, y0);
-  if (state.hints) drawStations(g, state, rcam);
+  drawGrout(g, rcam, x0, y0, rows, map);
+  if (state.grid) drawGrid(g, rcam, x0, y0, rows);
 
   // Contact shadows go down before anything stands on them.
   const people = [];
   for (const n of npcs) {
     if (n.px / TILE < x0 - 2 || n.px / TILE > x0 + VIEW_W + 2) continue;
-    if (n.py / TILE < y0 - 2 || n.py / TILE > y0 + VIEW_H + 2) continue;
+    if (n.py / TILE < y0 - 2 || n.py / TILE > y0 + rows + 2) continue;
     people.push(n);
   }
   for (const n of people) shadow(g, n.px - rcam.x, n.py - rcam.y, n.seated ? 11 : 13);
@@ -71,7 +80,6 @@ export function drawWorld(g, state) {
     });
   }
 
-  const workBob = player.working && Math.floor(state.tick / 8) % 2 === 0 ? -1 : 0;
   const walkBob = player.moving && (player.frame === 1 || player.frame === 4) ? -1 : 0;
   stacked.push({
     foot: player.py + TILE + 1,
@@ -80,7 +88,7 @@ export function drawWorld(g, state) {
     dir: player.dir,
     frame: player.frame,
     dx: Math.round(player.px - rcam.x),
-    dy: Math.round(player.py - rcam.y - LIFT) + workBob + walkBob,
+    dy: Math.round(player.py - rcam.y - LIFT) + walkBob,
     hero: true
   });
 
@@ -96,13 +104,21 @@ export function drawWorld(g, state) {
 
   drawFx(g, rcam);
   drawLight(g, { map, cam: rcam });
-  drawTimeOfDay(g, state.phase === 'play' || state.phase === 'done' ? dayProgress(state) : 0);
-  drawGrade(g);
 
-  // Anything that talks to the player sits above the light pass.
+  // Anything that talks to the player sits above the light pass but still in
+  // world space, so it tracks the sprite it belongs to.
   for (const n of people) if (n.say > 0) bubble(g, n, rcam);
-  if (state.hints) compass(g, state, rcam);
   drawNameTags(g, state, rcam, people);
+  if (state.hints && !state.dialogue) talkHint(g, state, rcam);
+
+  g.restore();
+
+  // The room's light follows the device's own day: cool before mid-morning,
+  // amber once the evening comes on.
+  const d = now();
+  const dayT = Math.max(0, Math.min(1, (d.getHours() + d.getMinutes() / 60 - 7) / 12));
+  drawTimeOfDay(g, dayT);
+  drawGrade(g);
 }
 
 function shadow(g, dx, dy, w, color = 'rgba(12,14,20,0.26)') {
@@ -128,7 +144,30 @@ function heroRing(g, state, dx, dy) {
   g.restore();
 }
 
-function drawGrid(g, cam, x0, y0) {
+// Large-format slabs meet in a hairline joint, light enough that the floor
+// reads as one continuous surface instead of a checkerboard.
+function drawGrout(g, cam, x0, y0, rows, map) {
+  const xa = Math.max(x0, 0), xb = Math.min(x0 + VIEW_W + 1, map.w);
+  const ya = Math.max(y0, 0), yb = Math.min(y0 + rows + 1, map.h);
+  g.save();
+  g.strokeStyle = 'rgba(104,96,82,0.20)';
+  g.lineWidth = 1;
+  g.beginPath();
+  for (let x = xa; x <= xb; x++) {
+    const dx = Math.round(x * TILE - cam.x) + 0.5;
+    g.moveTo(dx, ya * TILE - cam.y);
+    g.lineTo(dx, yb * TILE - cam.y);
+  }
+  for (let y = ya; y <= yb; y++) {
+    const dy = Math.round(y * TILE - cam.y) + 0.5;
+    g.moveTo(xa * TILE - cam.x, dy);
+    g.lineTo(xb * TILE - cam.x, dy);
+  }
+  g.stroke();
+  g.restore();
+}
+
+function drawGrid(g, cam, x0, y0, rows) {
   g.save();
   g.strokeStyle = 'rgba(150,200,215,0.16)';
   g.lineWidth = 1;
@@ -139,104 +178,13 @@ function drawGrid(g, cam, x0, y0) {
     g.lineTo(dx, SCREEN_H);
     g.stroke();
   }
-  for (let y = y0; y <= y0 + VIEW_H + 1; y++) {
+  for (let y = y0; y <= y0 + rows; y++) {
     const dy = Math.round(y * TILE - cam.y) + 0.5;
     g.beginPath();
     g.moveTo(0, dy);
     g.lineTo(SCREEN_W, dy);
     g.stroke();
   }
-  g.restore();
-}
-
-// The active objective stands on the tileset's own green ring; the ones behind
-// it in the day wear the red cross. Both are authored pieces, so the markers
-// belong to the same art rather than to a UI layer bolted on top.
-function drawStations(g, state, cam) {
-  const atlas = atlasImage();
-  const active = activeTask(state);
-  for (const t of state.tasks) {
-    const dx = t.x * TILE - cam.x;
-    const dy = t.y * TILE - cam.y;
-    if (dx < -TILE || dy < -TILE || dx > SCREEN_W || dy > SCREEN_H) continue;
-
-    const isActive = active && t.id === active.id;
-    const pulse = (Math.sin(state.tick * 0.08) + 1) / 2;
-
-    g.save();
-    if (t.done) {
-      g.globalAlpha = 0.34;
-      blitCell(g, atlas, 'O', dx, dy);
-      g.globalAlpha = 0.85;
-      g.strokeStyle = PAL.ok;
-      g.lineWidth = 2;
-      g.beginPath();
-      g.moveTo(dx + 12, dy + 17);
-      g.lineTo(dx + 15, dy + 21);
-      g.lineTo(dx + 21, dy + 12);
-      g.stroke();
-      g.restore();
-      continue;
-    }
-
-    g.globalAlpha = isActive ? 0.42 + pulse * 0.4 : 0.2;
-    blitCell(g, atlas, isActive ? 'O' : 'X', dx, dy);
-
-    if (isActive) {
-      // A chevron floating over the tile, bobbing.
-      const cy = dy - 6 - Math.round(pulse * 3);
-      g.globalAlpha = 0.92;
-      g.fillStyle = PAL.amber;
-      g.beginPath();
-      g.moveTo(dx + TILE / 2, cy + 7);
-      g.lineTo(dx + TILE / 2 - 6, cy);
-      g.lineTo(dx + TILE / 2 + 6, cy);
-      g.closePath();
-      g.fill();
-    }
-    g.restore();
-  }
-}
-
-// When the objective is off screen, an arrow pinned to the edge points at it.
-// The clamp keeps it clear of the name bar above and the objective strip below.
-function compass(g, state, cam) {
-  const t = activeTask(state);
-  if (!t) return;
-  const cx = t.x * TILE + TILE / 2 - cam.x;
-  const cy = t.y * TILE + TILE / 2 - cam.y;
-  const padX = 24;
-  const top = 46;
-  const bottom = SCREEN_H - 58;
-  if (cx > padX && cx < SCREEN_W - padX && cy > top && cy < bottom) return;
-
-  const ax = Math.max(padX, Math.min(SCREEN_W - padX, cx));
-  const ay = Math.max(top, Math.min(bottom, cy));
-  const ang = Math.atan2(cy - SCREEN_H / 2, cx - SCREEN_W / 2);
-  const dist = Math.round(Math.hypot(t.x - state.player.tx, t.y - state.player.ty));
-
-  g.save();
-  g.translate(ax, ay);
-  g.globalAlpha = 0.92;
-  g.fillStyle = 'rgba(16,19,27,0.82)';
-  g.beginPath();
-  g.arc(0, 0, 13, 0, Math.PI * 2);
-  g.fill();
-  g.strokeStyle = PAL.amber;
-  g.lineWidth = 1;
-  g.stroke();
-
-  g.rotate(ang);
-  g.fillStyle = PAL.amber;
-  g.beginPath();
-  g.moveTo(9, 0);
-  g.lineTo(1, -5);
-  g.lineTo(1, 5);
-  g.closePath();
-  g.fill();
-  g.rotate(-ang);
-
-  text(g, `${dist}`, 0, 10, PAL.text, 'center', 7, 'rgba(0,0,0,0.7)');
   g.restore();
 }
 
@@ -261,6 +209,30 @@ function bubble(g, n, cam) {
   g.closePath();
   g.fill();
   text(g, n.line, x + w / 2, y + 9, PAL.ink, 'center', 7);
+  g.restore();
+}
+
+// A small parchment chip over the nearest colleague you can talk to, so the
+// conversation is discoverable without reading the manual.
+function talkHint(g, state, cam) {
+  const n = nearestTalkable(state);
+  // A bubble already owns the space above their head; the chip waits its turn.
+  if (!n || n.say > 0) return;
+  const dx = Math.round(n.px - cam.x) + TILE / 2;
+  const dy = Math.round(n.py - cam.y) - LIFT - 12;
+  const label = 'E · Talk';
+  g.save();
+  g.font = '7px ui-monospace, Menlo, monospace';
+  const w = Math.ceil(g.measureText(label).width) + 10;
+  const x = Math.max(2, Math.min(SCREEN_W - w - 2, dx - w / 2));
+  const y = Math.max(14, dy - 12);
+  px(g, x + 1, y + 1, w, 12, 'rgba(20,16,10,0.35)');
+  px(g, x, y, w, 12, '#f7efd3');
+  px(g, x, y, w, 1, '#5a4632');
+  px(g, x, y + 11, w, 1, '#5a4632');
+  px(g, x, y, 1, 12, '#5a4632');
+  px(g, x + w - 1, y, 1, 12, '#5a4632');
+  text(g, label, x + w / 2, y + 9, '#3a2c1a', 'center', 7);
   g.restore();
 }
 

@@ -1,4 +1,4 @@
-import { isSolid, isObject } from '../art/tiles.js';
+import { isSolid, isObject } from '../art/tiles.js?v=8';
 
 // Size comes from the grid, never from a module constant. That is what lets a
 // kitchen be 18x12 while the office stays 34x26.
