@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- ?v= is a cache key: bump it when the sheet or the modules change, or the
        browser will happily keep serving the copy it already has. -->
-  <link rel="stylesheet" href="style.css?v=15" />
+  <link rel="stylesheet" href="style.css?v=24" />
 </head>
 <body>
 
@@ -133,10 +133,19 @@
        are painted inside the picture, so nothing sits outside the box. -->
   <div id="gameArea" class="game-area" style="display: none;">
     <div id="stage" class="stage">
-      <canvas id="gameCanvas" width="480" height="288"></canvas>
+      <!-- The renderer's pixel budget: every frame is drawn into 1280x720 and
+           blitted 1:1. The CSS box is what fits the stage, never the buffer. -->
+      <canvas id="gameCanvas" width="1280" height="720"></canvas>
 
       <!-- The evening offer, should the 18:00 question be declined. -->
       <button id="clockOutBtn" class="btn btn-ghost clock-out-btn" type="button" hidden>Clock out</button>
+
+      <!-- One zoom control for the two framings: it names the stop it will take
+           you to, so the wheel, +/- and this pill all do the same thing. -->
+      <button id="zoomBtn" class="btn btn-ghost zoom-btn" type="button" aria-pressed="false" aria-label="Zoom out">
+        <span class="zoom-icon" aria-hidden="true">⤢</span>
+        <span class="zoom-label">Zoom out</span>
+      </button>
 
       <div id="touchPad" class="touch-pad">
         <button class="pad up" data-dir="up" type="button" aria-label="Walk up">▲</button>
@@ -162,6 +171,6 @@
     </div>
   </div>
 
-  <script type="module" src="./src/main.js?v=15"></script>
+  <script type="module" src="./src/main.js?v=24"></script>
 </body>
 </html>

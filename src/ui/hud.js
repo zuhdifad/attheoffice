@@ -1,6 +1,6 @@
-import { SCREEN_W } from '../core/config.js?v=9';
-import { text, px } from '../core/draw.js?v=9';
-import { now, weekday } from './wallclock.js?v=9';
+import { SCREEN_W } from '../core/config.js?v=24';
+import { text, px } from '../core/draw.js?v=24';
+import { now, weekday } from './wallclock.js?v=24';
 
 // The only thing the room wears is the handheld's parchment clock, top-right:
 // the calendar day and weekday over a 12-hour AM/PM time, all of it the device's

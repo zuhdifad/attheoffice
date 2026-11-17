@@ -1,5 +1,5 @@
-import { TILE } from '../core/config.js?v=9';
-import { PAL } from '../art/palette.js?v=9';
+import { TILE } from '../core/config.js?v=24';
+import { PAL } from '../art/palette.js?v=24';
 
 // A fixed pool, so a long day never allocates its way into a stutter and a
 // restart never leaves an emitter running. Everything is in world pixels.
@@ -41,25 +41,29 @@ export function updateFx() {
   }
 }
 
-export function drawFx(g, cam) {
+export function drawFx(g, cam, ppu = 1) {
+  const at = (v) => Math.round(v * ppu) / ppu;
   for (const p of pool) {
     if (!p.live) continue;
     const t = p.life / p.max;
-    const x = Math.round(p.x - cam.x);
-    const y = Math.round(p.y - cam.y);
+    const x = at(p.x - cam.x);
+    const y = at(p.y - cam.y);
     g.globalAlpha = p.kind === 'steam' ? t * 0.42 : Math.min(1, t * 1.6);
     g.fillStyle = p.color;
     if (p.kind === 'ring') {
-      const r = Math.round((1 - t) * p.size);
+      // Radii and sizes round on the device grid, not the world grid: at four
+      // pixels per unit a world-rounded ring would grow in steps of four.
+      const r = Math.round((1 - t) * p.size * ppu) / ppu;
       g.globalAlpha = t * 0.7;
       g.strokeStyle = p.color;
-      g.lineWidth = 1;
+      g.lineWidth = 1 / ppu;
       g.beginPath();
-      g.arc(x, y, Math.max(1, r), 0, Math.PI * 2);
+      g.arc(x, y, Math.max(1 / ppu, r), 0, Math.PI * 2);
       g.stroke();
     } else {
-      const s = p.kind === 'confetti' ? p.size : Math.max(1, Math.round(p.size * t));
-      g.fillRect(x - (s >> 1), y - (s >> 1), s, p.kind === 'confetti' ? Math.max(1, s - 1) : s);
+      const s = p.kind === 'confetti' ? p.size : Math.max(1 / ppu, Math.round(p.size * t * ppu) / ppu);
+      const half = Math.round((s * ppu) / 2) / ppu;
+      g.fillRect(x - half, y - half, s, p.kind === 'confetti' ? Math.max(1 / ppu, s - 1 / ppu) : s);
     }
   }
   g.globalAlpha = 1;

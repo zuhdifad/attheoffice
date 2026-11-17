@@ -1,28 +1,31 @@
-import { SCREEN_W, SCREEN_H } from './config.js?v=9';
+import { BUFFER_W, BUFFER_H } from './config.js?v=24';
 
 export const screen = document.getElementById('gameCanvas');
-export const sctx = screen.getContext('2d');
+// The picture is always a full-buffer opaque blit, so the screen needs no
+// alpha channel: the compositor uploads it without per-pixel blending.
+export const sctx = screen.getContext('2d', { alpha: false });
 
-// Everything is drawn into a true 480x288 buffer, then blitted up by a whole
-// number. Scaling the canvas itself instead would give half-pixels.
+// Everything is drawn into one true 1280x720 buffer and blitted 1:1, so a frame
+// costs what the pixel budget says whatever size the window is. Scaling the
+// canvas itself instead would put the world and the type on half-pixels.
 export const buf = document.createElement('canvas');
-buf.width = SCREEN_W;
-buf.height = SCREEN_H;
+buf.width = BUFFER_W;
+buf.height = BUFFER_H;
 export const g = buf.getContext('2d');
 g.imageSmoothingEnabled = false;
 
-// The backing store stays fixed; only the CSS size changes.
-screen.width = SCREEN_W;
-screen.height = SCREEN_H;
+// The picture is 1:1 with the buffer; the backing store is never resized.
+screen.width = BUFFER_W;
+screen.height = BUFFER_H;
 sctx.imageSmoothingEnabled = false;
 
-// The room is pinned at 2x: there is no zoom control and every visit opens on
-// the same framed picture. A small screen scales the whole buffer down by one
-// common factor, so the room is letterboxed rather than cropped.
+// Fitting the picture to the stage is now purely a CSS job: the room is
+// letterboxed inside #stage rather than cropped, and the buffer behind it stays
+// 1280x720 on a phone exactly as it does on a desktop.
 export function applyZoom(state) {
   const stage = document.getElementById('stage');
-  let w = SCREEN_W * state.zoom;
-  let h = SCREEN_H * state.zoom;
+  let w = BUFFER_W;
+  let h = BUFFER_H;
   if (stage) {
     const availW = Math.max(120, stage.clientWidth - 24);
     const availH = Math.max(80, stage.clientHeight - 24);
@@ -32,6 +35,10 @@ export function applyZoom(state) {
   }
   screen.style.width = `${Math.round(w)}px`;
   screen.style.height = `${Math.round(h)}px`;
+  // At or above 1:1 the device is stretching the picture anyway, so the pixel
+  // edges stay hard; below it the browser's own filter beats dropping rows of
+  // a 1280px buffer onto a phone.
+  screen.style.imageRendering = w >= BUFFER_W ? 'pixelated' : 'auto';
 }
 
 export function bindResize(state) {
@@ -45,6 +52,6 @@ export function bindResize(state) {
 }
 
 export function present() {
-  sctx.clearRect(0, 0, SCREEN_W, SCREEN_H);
+  // Opaque full-frame blit: nothing survives under it, so no clear is needed.
   sctx.drawImage(buf, 0, 0);
 }

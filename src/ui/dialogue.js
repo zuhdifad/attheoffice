@@ -1,9 +1,11 @@
-import { SCREEN_W, SCREEN_H } from '../core/config.js?v=9';
-import { canvas, text, px } from '../core/draw.js?v=9';
-import { bustFor } from '../art/characters.js?v=9';
-import { CHARACTERS } from '../art/palette.js?v=9';
-import { faceToward } from '../entities/player.js?v=9';
-import { sfx } from '../core/audio.js?v=9';
+import { SCREEN_W, SCREEN_H } from '../core/config.js?v=24';
+import { canvas, text, px } from '../core/draw.js?v=24';
+import { bustFor } from '../art/characters.js?v=24';
+import { CHARACTERS } from '../art/palette.js?v=24';
+import { faceToward } from '../entities/player.js?v=24';
+import { sfx } from '../core/audio.js?v=24';
+import { EXPRESSION, setMood } from '../art/expressions.js?v=24';
+import { actorFor } from '../art/rig.js?v=24';
 
 // The conversation box, in the register of the handheld reference: a parchment
 // panel with a dark-brown rounded border, the speaker's bust framed at the top
@@ -16,72 +18,74 @@ const PARCH = '#f7efd3';
 const PARCH_HI = '#fbf6e4';
 const PARCH_LO = '#e8dcb8';
 
-// Two to three pages apiece, in each colleague's own voice and role.
+// Two to three pages apiece, in each colleague's own voice and role. A line may
+// open with an expression tag — '[happy] …' — which the window puts on the
+// speaker's face when the page opens; untagged pages keep the last face.
 const DIALOGUE = {
   zuhdi: [
-    'Morning! The deploy went out clean at eight, so of course something will break by lunch. It always does.',
-    'If the pipeline goes red, do not panic. Roll back first, apologise on Monday, and nobody ever remembers the Friday.',
-    'Oh — and if you find a spare charger, it is mine. It has been missing since the last sprint.'
+    '[happy] Morning! The deploy went out clean at eight, so of course something will break by lunch. It always does.',
+    '[going-crazy] If the pipeline goes red, do not panic. Roll back first, apologise on Monday, and nobody ever remembers the Friday.',
+    '[sad] Oh — and if you find a spare charger, it is mine. It has been missing since the last sprint.'
   ],
   alicia: [
-    'The client call is at eleven. I run the room at ten past, so be seated and be brief.',
-    'Clients do not buy the deck, they buy the calm in your voice. Keep it steady and let the numbers do the shouting.',
-    'Good. Now go look busy before someone hands you a committee.'
+    '[ambitious] The client call is at eleven. I run the room at ten past, so be seated and be brief.',
+    '[happy] Clients do not buy the deck, they buy the calm in your voice. Keep it steady and let the numbers do the shouting.',
+    '[bored] Good. Now go look busy before someone hands you a committee.'
   ],
   anna: [
-    'Happy almost-Friday! I know every birthday on this floor, and I know exactly who left the mug in the sink.',
-    'Both get followed up. Kindly, but thoroughly. People Ops is just patience with a spreadsheet.',
-    'If you need anything — a form, an ear, an escape route — my door is the one with the plant.'
+    '[happy] Happy almost-Friday! I know every birthday on this floor, and I know exactly who left the mug in the sink.',
+    '[crying] Both get followed up. Kindly, but thoroughly. People Ops is just patience with a spreadsheet.',
+    '[in-love] If you need anything — a form, an ear, an escape route — my door is the one with the plant.'
   ],
   janice: [
-    'The report prints when I say it prints. Finance approves the coffee budget and questions the coffee consumption.',
-    'Every receipt, every line. Bring me clean numbers and I will sign before the kettle boils.',
-    'Do not look at me like that. The budget is a love language.'
+    '[angry] The report prints when I say it prints. Finance approves the coffee budget and questions the coffee consumption.',
+    '[ambitious] Every receipt, every line. Bring me clean numbers and I will sign before the kettle boils.',
+    '[in-love] Do not look at me like that. The budget is a love language.'
   ],
   phat: [
-    'I drew the diagram before the meeting started. It is always faster to argue with a picture than with a paragraph.',
-    'Three pens in the pocket, one of them working. The architecture is the same: keep the parts that carry load.',
-    'Come find me at the whiteboard when the boxes stop making sense.'
+    '[curious] I drew the diagram before the meeting started. It is always faster to argue with a picture than with a paragraph.',
+    '[bored] Three pens in the pocket, one of them working. The architecture is the same: keep the parts that carry load.',
+    '[happy] Come find me at the whiteboard when the boxes stop making sense.'
   ],
   philip: [
-    'How is it going? And I will actually wait for the answer, so think before you say "fine".',
-    'Two laps of the floor a day. I am not checking up on you, I am checking the room is breathing.',
-    'Good pace today. Keep it steady and go home on time — that is an order.'
+    '[curious] How is it going? And I will actually wait for the answer, so think before you say "fine".',
+    '[happy] Two laps of the floor a day. I am not checking up on you, I am checking the room is breathing.',
+    '[ambitious] Good pace today. Keep it steady and go home on time — that is an order.'
   ],
   suhendri: [
-    'First into the queue, last out of the stand-up. The headset tan is permanent, the patience is not.',
-    'Every ticket is a person having a bad day. Answer the person, then fix the ticket.',
-    'If the queue spikes, breathe. It always spikes. It always clears.'
+    '[tired] First into the queue, last out of the stand-up. The headset tan is permanent, the patience is not.',
+    '[happy] Every ticket is a person having a bad day. Answer the person, then fix the ticket.',
+    '[sleepy] If the queue spikes, breathe. It always spikes. It always clears.'
   ],
   takuya: [
-    'I aligned the pixel, then I aligned it again. It was one pixel off and it was personally offending me.',
-    'Cardigan weather indoors, twelve months a year. The vents and I have an understanding.',
-    'If the layout shifts on your screen, tell me. Do not tell the designer first.'
+    '[angry] I aligned the pixel, then I aligned it again. It was one pixel off and it was personally offending me.',
+    '[lazy] Cardigan weather indoors, twelve months a year. The vents and I have an understanding.',
+    '[curious] If the layout shifts on your screen, tell me. Do not tell the designer first.'
   ],
   tracy: [
-    'I brought the review deck and the good markers. The opinions are held firmly and explained kindly.',
-    'Design is not decoration, it is the argument made visible. Show me the flow, not the colour.',
-    'Come to the sprint review. Bring questions, leave the pixel-counting to Takuya.'
+    '[happy] I brought the review deck and the good markers. The opinions are held firmly and explained kindly.',
+    '[ambitious] Design is not decoration, it is the argument made visible. Show me the flow, not the colour.',
+    '[excited] Come to the sprint review. Bring questions, leave the pixel-counting to Takuya.'
   ],
   ayu: [
-    'I found the bug in the happy path. Filed it politely, reproduced it perfectly, attached the video.',
-    'The happy path is where everyone stops looking. That is exactly where I start.',
-    'If it works on your machine, wonderful. Now let us watch it work on mine.'
+    '[excited] I found the bug in the happy path. Filed it politely, reproduced it perfectly, attached the video.',
+    '[curious] The happy path is where everyone stops looking. That is exactly where I start.',
+    '[ambitious] If it works on your machine, wonderful. Now let us watch it work on mine.'
   ],
   'raja-aqilah': [
-    'I turned the stand-up into a chart before the stand-up ended. The numbers were exact; the opinions were not.',
-    'Data does not argue, it just waits for you to read it properly. Here, I will show you the axis.',
-    'Bring me a question with a number in it and I will bring you an answer with three.'
+    '[ambitious] I turned the stand-up into a chart before the stand-up ended. The numbers were exact; the opinions were not.',
+    '[bored] Data does not argue, it just waits for you to read it properly. Here, I will show you the axis.',
+    '[curious] Bring me a question with a number in it and I will bring you an answer with three.'
   ],
   aaron: [
-    'Closed on the second call. The first call is for listening; the second is for signing.',
-    'The good coffee pods are in my top drawer. Earn one and I will show you which.',
-    'Sales is just confidence with a calendar. Book the follow-up before you hang up.'
+    '[laughing] Closed on the second call. The first call is for listening; the second is for signing.',
+    '[happy] The good coffee pods are in my top drawer. Earn one and I will show you which.',
+    '[ambitious] Sales is just confidence with a calendar. Book the follow-up before you hang up.'
   ],
   max: [
-    'Early for the eleven o\'clock, as always. I sign off the review and I remember your name — both matter.',
-    'Partnerships are long games. Be the person who shows up prepared and leaves on time.',
-    'Good to see you on the floor. Now go make the client glad they picked us.'
+    '[happy] Early for the eleven o\'clock, as always. I sign off the review and I remember your name — both matter.',
+    '[ambitious] Partnerships are long games. Be the person who shows up prepared and leaves on time.',
+    '[happy] Good to see you on the floor. Now go make the client glad they picked us.'
   ]
 };
 
@@ -116,15 +120,25 @@ function wrap(str, width) {
 }
 
 // Author pages become render pages of at most three wrapped lines each, so a
-// long thought auto-paginates instead of overflowing the box.
+// long thought auto-paginates instead of overflowing the box. A leading
+// '[name]' tag rides on the page, not on the text: the window puts it on the
+// speaker's face, the box never prints it.
 function buildPages(id) {
   const src = DIALOGUE[id] || ['…'];
   const pages = [];
   for (const str of src) {
-    const lines = wrap(str, TEXT_W);
-    for (let i = 0; i < lines.length; i += MAX_LINES) pages.push(lines.slice(i, i + MAX_LINES));
+    const m = /^\[([a-z-]+)\]\s*/.exec(str);
+    const tag = m && EXPRESSION[m[1]] ? m[1] : null;
+    const lines = wrap(m ? str.slice(m[0].length) : str, TEXT_W);
+    for (let i = 0; i < lines.length; i += MAX_LINES) pages.push({ lines: lines.slice(i, i + MAX_LINES), tag });
   }
   return pages;
+}
+
+// The face a page asks for. A long hold keeps it up for the whole conversation;
+// closing releases it back to the resting face.
+function pageMood(npc, page) {
+  if (page && page.tag) setMood(actorFor(npc), page.tag, 100000);
 }
 
 function pitchFor(id) {
@@ -155,11 +169,15 @@ export function openDialogue(state, npc) {
   const dy = state.player.ty - npc.ty;
   npc.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
   npc.say = 0;
+  // The window applies the page's expression on open, so the face is already
+  // turning by the time the first character lands.
+  pageMood(npc, pages[0]);
   sfx.talk();
 }
 
 export function closeDialogue(state) {
   if (!state.dialogue) return;
+  setMood(actorFor(state.dialogue.npc), 'neutral', 0);
   state.dialogue = null;
   sfx.talkClose();
 }
@@ -169,7 +187,7 @@ export function updateDialogue(state, input) {
   const d = state.dialogue;
   if (!d) return false;
   d.t++;
-  const full = d.pages[d.page].join('').length;
+  const full = d.pages[d.page].lines.join('').length;
   if (d.shown < full && d.t % 2 === 0) {
     d.shown++;
     if (d.shown % 2 === 0) sfx.blip(d.pitch);
@@ -181,6 +199,7 @@ export function updateDialogue(state, input) {
       d.page++;
       d.shown = 0;
       d.t = 0;
+      pageMood(d.npc, d.pages[d.page]);
       sfx.talk();
     } else {
       closeDialogue(state);
@@ -222,7 +241,7 @@ export function drawDialogue(g, state) {
   const d = state.dialogue;
   if (!d) return;
   const who = CHARACTERS.find((c) => c.id === d.npc.id);
-  const lines = d.pages[d.page];
+  const lines = d.pages[d.page].lines;
   const full = lines.join('').length;
   const done = d.shown >= full;
 

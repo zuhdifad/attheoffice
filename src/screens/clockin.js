@@ -1,5 +1,5 @@
-import { initAudio, sfx } from '../core/audio.js?v=9';
-import { CHARACTERS } from '../art/palette.js?v=9';
+import { initAudio, sfx } from '../core/audio.js?v=24';
+import { CHARACTERS } from '../art/palette.js?v=24';
 
 // The title card hands over to a short loading plate — FIGHTING — and then to
 // the questions the floor asks before it issues a badge: a name, a level, a

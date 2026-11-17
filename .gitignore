@@ -2,3 +2,5 @@
 .qa-profile/
 qa/
 screenshot*.png
+__pycache__/
+*.pyc

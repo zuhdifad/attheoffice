@@ -30,8 +30,13 @@ export const state = {
   walkable: () => false,
 
   cam: { x: 0, y: 0, shake: 0 },
-  // Pinned at 2x: the room always opens on the same framed picture.
-  zoom: 2,
+  // Which of the two framings is on screen: 'near' or 'far', both drawn into the
+  // same 1280x720 buffer. This is the stop the renderer is actually drawing, so
+  // it only flips when the plate does — at the midpoint of a re-frame.
+  view: 'near',
+  // A re-frame in flight: { from, to, n } while ~150 ms of easing is left, null
+  // when the camera is sitting on a stop. world/camera.js owns it.
+  zoom: null,
 
   // The visit, in real device time. clockedInAt is stamped when the worker is
   // confirmed; askingClockOut freezes the player while the 18:00 question is
@@ -65,5 +70,6 @@ export function resetDay(keep) {
   state.result = null;
   state.dialogue = null;
   state.cam.shake = 0;
+  state.zoom = null;
   if (keep) Object.assign(state, keep);
 }

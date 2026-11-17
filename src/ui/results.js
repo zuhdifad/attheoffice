@@ -1,6 +1,6 @@
-import { SCREEN_W, SCREEN_H } from '../core/config.js?v=9';
-import { text, px } from '../core/draw.js?v=9';
-import { bustFor } from '../art/characters.js?v=9';
+import { SCREEN_W, SCREEN_H } from '../core/config.js?v=24';
+import { text, px } from '../core/draw.js?v=24';
+import { bustFor } from '../art/characters.js?v=24';
 
 // The clock-out receipt, drawn into the same buffer as the room so it inherits
 // the pixel grid. Parchment, like the conversation box: the day ends the same

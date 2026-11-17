@@ -1,26 +1,27 @@
-import { SCREEN_W, SCREEN_H } from '../core/config.js?v=9';
-import { px, vgrad } from '../core/draw.js?v=9';
+import { BUFFER_W, BUFFER_H, SCREEN_W, SCREEN_H } from '../core/config.js?v=24';
+import { px, vgrad } from '../core/draw.js?v=24';
 
 // One cached vignette is shared by the menus and the world, which is what stops
-// the start screen from looking like a different product than the room.
+// the start screen from looking like a different product than the room. It is
+// baked at the buffer's size and drawn 1:1, so it never has to be stretched.
 
 let vig = null;
 
 function vignetteLayer() {
   if (vig) return vig;
   const c = document.createElement('canvas');
-  c.width = SCREEN_W;
-  c.height = SCREEN_H;
+  c.width = BUFFER_W;
+  c.height = BUFFER_H;
   const x = c.getContext('2d');
   const r = x.createRadialGradient(
-    SCREEN_W / 2, SCREEN_H / 2, Math.min(SCREEN_W, SCREEN_H) * 0.30,
-    SCREEN_W / 2, SCREEN_H / 2, SCREEN_W * 0.74
+    BUFFER_W / 2, BUFFER_H / 2, Math.min(BUFFER_W, BUFFER_H) * 0.30,
+    BUFFER_W / 2, BUFFER_H / 2, BUFFER_W * 0.74
   );
   r.addColorStop(0, 'rgba(8,11,17,0)');
   r.addColorStop(0.55, 'rgba(8,11,17,0.10)');
   r.addColorStop(1, 'rgba(6,8,13,0.46)');
   x.fillStyle = r;
-  x.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  x.fillRect(0, 0, BUFFER_W, BUFFER_H);
   vig = c;
   return c;
 }

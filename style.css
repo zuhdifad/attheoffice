@@ -638,6 +638,29 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
    evening offer stays off the glass until 18:00 puts it there. */
 .clock-out-btn[hidden] { display: none; }
 
+/* The one zoom control: a quiet pill in the corner of the picture. It sits on
+   the picture rather than beside it, so the room never loses a row to chrome. */
+.zoom-btn {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: rgba(15, 19, 27, .84);
+  border-color: rgba(255, 255, 255, .16);
+  backdrop-filter: blur(6px);
+}
+.zoom-btn:hover { background: rgba(43, 163, 176, .16); color: var(--text); border-color: rgba(43, 163, 176, .5); }
+.zoom-icon { font-size: 13px; line-height: 1; letter-spacing: 0; }
+
 .stage {
   position: relative;
   width: 100%;
@@ -721,6 +744,10 @@ body:not(.ready) #clockInBtn { opacity: .32; pointer-events: none; animation: no
   /* The pad takes its own row under the room rather than sitting on top of the
      objective strip, so nothing it does is ever hidden by a thumb. */
   .stage { grid-template-rows: minmax(0, 1fr) auto; row-gap: 8px; }
+  /* The thumb pad owns the bottom of the stage, so the chrome moves above the
+     room and the evening offer stacks under the zoom pill. */
+  .zoom-btn { bottom: auto; top: 10px; left: 10px; padding: 8px 10px; }
+  .clock-out-btn { top: 54px; left: 10px; }
   .touch-pad {
     display: grid;
     grid-template-columns: repeat(3, 52px) 52px 84px;

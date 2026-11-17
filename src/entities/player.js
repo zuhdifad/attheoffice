@@ -1,5 +1,5 @@
-import { TILE, STEP_FRAMES } from '../core/config.js?v=9';
-import { frameFor } from '../art/characters.js?v=9';
+import { TILE, STEP_FRAMES } from '../core/config.js?v=24';
+import { frameFor } from '../art/characters.js?v=24';
 
 const DELTA = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
@@ -18,21 +18,31 @@ export function createPlayer(x, y, who) {
     frame: 0,
     moving: false,
     step: 0,
+    stepLen: STEP_FRAMES,
     steps: 0,
     working: false,
-    arrived: false
+    arrived: false,
+    // The action state machine: sit, drink and laptop are single-key actions
+    // the world screen starts beside the right prop; the seat is the claim
+    // held while sitting, and `leaving` the one being stood up from.
+    action: 'idle',
+    act: 0,
+    seated: false,
+    seat: null,
+    leaving: null
   };
 }
 
 // Tile-locked movement: start a step toward the next tile centre, advance it a
 // little each frame, snap on arrival. walkable is injected so the player module
-// never has to know about the map or the crowd.
+// never has to know about the map or the crowd. A step may carry its own
+// length: the sit-down and stand-up glides ride the transition's own frames.
 export function updatePlayer(p, walkable, heldDir) {
   p.arrived = false;
 
   // Working roots you to the spot, but you still face the desk you are using.
-  if (p.working) {
-    p.moving = false;
+  // A glide in flight (boarding or leaving a chair) finishes first.
+  if (p.working && !p.moving) {
     p.frame = 0;
     p.step = 0;
     return;
@@ -50,21 +60,23 @@ export function updatePlayer(p, walkable, heldDir) {
     p.to = { x: nx, y: ny };
     p.moving = true;
     p.step = 0;
+    p.stepLen = STEP_FRAMES;
   }
 
   p.step++;
-  const t = Math.min(p.step / STEP_FRAMES, 1);
+  const t = Math.min(p.step / p.stepLen, 1);
   p.px = (p.from.x + (p.to.x - p.from.x) * t) * TILE;
   p.py = (p.from.y + (p.to.y - p.from.y) * t) * TILE;
-  p.frame = frameFor(p.step, STEP_FRAMES, true);
+  p.frame = frameFor(p.step, p.stepLen, true);
 
-  if (p.step >= STEP_FRAMES) {
+  if (p.step >= p.stepLen) {
     p.tx = p.to.x;
     p.ty = p.to.y;
     p.px = p.tx * TILE;
     p.py = p.ty * TILE;
     p.moving = false;
     p.step = 0;
+    p.stepLen = STEP_FRAMES;
     p.frame = 0;
     p.steps++;
     p.arrived = true;
