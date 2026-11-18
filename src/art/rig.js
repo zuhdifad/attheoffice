@@ -60,12 +60,12 @@
 // layers at the head pivot plus a 24x24 overlay — over whichever body path
 // draws. Poses are transforms on the doll, never a new sheet.
 
-import { CHAR_W, CHAR_H, VIEWS, RIG } from '../core/config.js?v=24';
-import { drawChar, drawRigChar, rigFor } from './characters.js?v=24';
-import { ACTIONS, actionFrame } from '../entities/actions.js?v=24';
+import { CHAR_W, CHAR_H, VIEWS, RIG } from '../core/config.js?v=26';
+import { drawChar, drawRigChar, rigFor } from './characters.js?v=26';
+import { ACTIONS, actionFrame } from '../entities/actions.js?v=26';
 import {
   POSES, createMood, updateMood, setMood, faceBlend, drawFace
-} from './expressions.js?v=24';
+} from './expressions.js?v=26';
 
 const RIGS = new Map();   // id -> { meta, animRows, body, head, hair, face, overlay } | null
 const LOADS = new Map();  // id -> Promise<boolean>, so boot and QA share one fetch
@@ -153,10 +153,12 @@ export function createActor(id) {
 }
 
 // One actor per entity, cached on the entity itself so the roster, the view and
-// the update loop all reach the same state without a side table.
+// the update loop all reach the same state without a side table. A remote
+// person carries a session id for the sim but a character id for the art, so
+// the doll is looked up by artId when one is set.
 export function actorFor(entity) {
   if (!entity.actor) {
-    entity.actor = createActor(entity.id);
+    entity.actor = createActor(entity.artId || entity.id);
     entity.actor.entity = entity;
   }
   return entity.actor;

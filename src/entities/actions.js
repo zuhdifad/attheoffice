@@ -1,4 +1,4 @@
-import { RIG } from '../core/config.js?v=24';
+import { RIG } from '../core/config.js?v=26';
 
 // ---- The actor action state machine ------------------------------------------
 // Every character — player and colleague alike — is always in exactly one
@@ -27,7 +27,8 @@ export const ACTIONS = {
   drink:   { anim: 'sip',     loop: false, hold: 5, next: 'idle' },
   laptop:  { anim: 'type',    loop: true,  hold: 8,                seated: true },
   standup: { anim: 'sit',     loop: false, hold: 4, next: 'idle',  seated: true, reverse: true },
-  door:    { anim: 'wave',    loop: false, hold: 5, next: 'idle' }
+  door:    { anim: 'wave',    loop: false, hold: 5, next: 'idle' },
+  wave:    { anim: 'wave',    loop: false, hold: 5, next: 'idle' }
 };
 
 // Frame counts come off the baked rig table, which the layered manifests match

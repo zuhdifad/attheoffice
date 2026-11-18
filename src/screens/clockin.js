@@ -1,5 +1,7 @@
-import { initAudio, sfx } from '../core/audio.js?v=24';
-import { CHARACTERS } from '../art/palette.js?v=24';
+import { initAudio, sfx } from '../core/audio.js?v=26';
+import { CHARACTERS } from '../art/palette.js?v=26';
+import { net } from '../core/net.js?v=26';
+import * as seatmap from './seatmap.js?v=26';
 
 // The title card hands over to a short loading plate — FIGHTING — and then to
 // the questions the floor asks before it issues a badge: a name, a level, a
@@ -7,11 +9,6 @@ import { CHARACTERS } from '../art/palette.js?v=24';
 // through the callback, so this module keeps nothing but the run it is in the
 // middle of.
 const LOAD_MS = 1700;
-
-// The floor is two desk banks of eight; the chips number each run the way the
-// personnel files do ("Bank A · 03").
-const BANKS = ['Bank A', 'Bank B'];
-const SEATS_PER_BANK = 8;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -31,6 +28,7 @@ export function bind({ onStartToWork }) {
   const whoForm = document.getElementById('whoForm');
   const whoInput = document.getElementById('whoInput');
   const whoError = document.getElementById('whoError');
+  const whereError = document.getElementById('whereError');
   const partnerForm = document.getElementById('partnerForm');
   const partnerInput = document.getElementById('partnerInput');
   const partnerError = document.getElementById('partnerError');
@@ -39,17 +37,18 @@ export function bind({ onStartToWork }) {
   let name = '';
   let floor = '';
   let seat = '';
+  let seatNum = 0;
+  let seatTile = null;
   let role = '';
   let current = 'who';
   let loading = false;
 
-  const seatBtns = [];
   const roleBtns = [];
 
   const focusFor = () => ({
     who: whoInput,
-    where: floors[0],
-    seat: seatBtns[0],
+    where: floors.find((f) => !f.disabled),
+    seat: null, // the plan focuses its own canvas
     role: roleBtns[0],
     partner: partnerInput
   }[current]);
@@ -59,6 +58,9 @@ export function bind({ onStartToWork }) {
     for (const [key, node] of Object.entries(stages)) {
       node.classList.toggle('is-on', key === stage);
     }
+    // The seat plan is live only while it is the question on screen: its
+    // availability refresh follows the stage, not the whole enlist run.
+    seatmap.setActive(stage === 'seat');
     // Focus lands on whatever the stage is asking for, so a keyboard player
     // never has to hunt for it.
     requestAnimationFrame(() => focusFor()?.focus());
@@ -68,34 +70,20 @@ export function bind({ onStartToWork }) {
   const PREV = { where: 'who', seat: 'where', role: 'seat', partner: 'role' };
 
   // ---- pick a seat ---------------------------------------------------------
+  // The question is asked on the floor's own plan: all 32 chairs, numbered,
+  // with live availability — a colleague clocking in on another window takes
+  // their chair on this map within the second.
   const seatPick = document.getElementById('seatPick');
-  for (const bank of BANKS) {
-    const group = document.createElement('div');
-    group.className = 'seat-group';
-    const label = document.createElement('span');
-    label.className = 'field-label';
-    label.textContent = bank;
-    const row = document.createElement('div');
-    row.className = 'seat-row';
-    for (let n = 1; n <= SEATS_PER_BANK; n++) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'pick-btn';
-      const num = String(n).padStart(2, '0');
-      b.dataset.seat = `${bank} · ${num}`;
-      b.textContent = num;
-      b.setAttribute('aria-label', b.dataset.seat);
-      b.addEventListener('click', () => {
-        seat = b.dataset.seat;
-        sfx.ui();
-        showStage('role');
-      });
-      row.append(b);
-      seatBtns.push(b);
-    }
-    group.append(label, row);
-    seatPick.append(group);
-  }
+  seatmap.open(seatPick, {
+    onPick: (info) => {
+      seat = info.label;
+      seatNum = info.num;
+      seatTile = { x: info.x, y: info.y };
+      showStage('role');
+    },
+    getTaken: () => net.takenSeats()
+  });
+  seatmap.setActive(false);
 
   // ---- pick a role ---------------------------------------------------------
   // The roles are the ones already on the floor, so the badge never claims a
@@ -160,9 +148,13 @@ export function bind({ onStartToWork }) {
     whoError.textContent = '';
   });
 
+  // Only Level 22 is open. The other floors stay on the card, locked, so the
+  // building reads as a building — but the badge is issued for the live floor.
   for (const btn of floors) {
     btn.addEventListener('click', () => {
+      if (btn.disabled) return;
       floor = btn.dataset.floor;
+      whereError.textContent = '';
       sfx.ui();
       showStage('seat');
     });
@@ -182,7 +174,7 @@ export function bind({ onStartToWork }) {
     partnerError.textContent = '';
     sfx.clockIn();
     close();
-    onStartToWork({ name, floor, seat, role, partner: value });
+    onStartToWork({ name, floor, seat, seatNum, seatTile, role, partner: value });
   });
 
   partnerInput.addEventListener('input', () => {
@@ -218,7 +210,14 @@ export function bind({ onStartToWork }) {
         else close();
       } else if (current === 'where' && /^[1-3]$/.test(e.key)) {
         const btn = floors[Number(e.key) - 1];
-        if (btn) { e.preventDefault(); btn.click(); }
+        if (!btn) return;
+        e.preventDefault();
+        if (btn.disabled) {
+          whereError.textContent = `${btn.dataset.floor} opens soon — Level 22 is the live floor.`;
+          sfx.back();
+        } else {
+          btn.click();
+        }
       }
       return;
     }

@@ -1,5 +1,5 @@
-import { TILE, STEP_FRAMES } from '../core/config.js?v=24';
-import { frameFor } from '../art/characters.js?v=24';
+import { TILE, STEP_FRAMES } from '../core/config.js?v=26';
+import { frameFor } from '../art/characters.js?v=26';
 
 const DELTA = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
@@ -29,7 +29,11 @@ export function createPlayer(x, y, who) {
     act: 0,
     seated: false,
     seat: null,
-    leaving: null
+    leaving: null,
+    // A chat line says itself over your own head too, the way a colleague's
+    // does — the floor reads as people talking, not as a log.
+    say: 0,
+    line: ''
   };
 }
 

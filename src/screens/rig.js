@@ -8,14 +8,14 @@
 // The live strip at the bottom runs the runtime API for real: playAnim,
 // updateActor, setExpression, and the draw-time left mirror.
 
-import { BUFFER_W, BUFFER_H, CHAR_W, CHAR_H, SHEET_COLS, RIG, FRAME_MS } from '../core/config.js?v=24';
-import { CHARACTERS, PAL } from '../art/palette.js?v=24';
-import { loadRigNear, loadRigFar, evictRigNear, rigFor, sheetFor } from '../art/characters.js?v=24';
-import { loadActorRig, actorRigFor, createActor, playAnim, setExpression, updateActor, drawActor } from '../art/rig.js?v=24';
-import { updateMood } from '../art/expressions.js?v=24';
-import { state } from '../core/state.js?v=24';
-import { applyZoom } from '../core/display.js?v=24';
-import { text, px } from '../core/draw.js?v=24';
+import { BUFFER_W, BUFFER_H, CHAR_W, CHAR_H, SHEET_COLS, RIG, FRAME_MS } from '../core/config.js?v=26';
+import { CHARACTERS, PAL } from '../art/palette.js?v=26';
+import { loadRigNear, loadRigFar, evictRigNear, rigFor, sheetFor } from '../art/characters.js?v=26';
+import { loadActorRig, actorRigFor, createActor, playAnim, setExpression, updateActor, drawActor } from '../art/rig.js?v=26';
+import { updateMood } from '../art/expressions.js?v=26';
+import { state } from '../core/state.js?v=26';
+import { applyZoom } from '../core/display.js?v=26';
+import { text, px } from '../core/draw.js?v=26';
 
 const DIRS4 = ['down', 'side', 'up', 'left'];
 const LIVE_DIRS = ['down', 'side', 'up', 'left'];

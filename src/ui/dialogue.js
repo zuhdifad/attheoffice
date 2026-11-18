@@ -1,11 +1,10 @@
-import { SCREEN_W, SCREEN_H } from '../core/config.js?v=24';
-import { canvas, text, px } from '../core/draw.js?v=24';
-import { bustFor } from '../art/characters.js?v=24';
-import { CHARACTERS } from '../art/palette.js?v=24';
-import { faceToward } from '../entities/player.js?v=24';
-import { sfx } from '../core/audio.js?v=24';
-import { EXPRESSION, setMood } from '../art/expressions.js?v=24';
-import { actorFor } from '../art/rig.js?v=24';
+import { SCREEN_W, SCREEN_H } from '../core/config.js?v=26';
+import { canvas, text, px } from '../core/draw.js?v=26';
+import { bustFor } from '../art/characters.js?v=26';
+import { faceToward } from '../entities/player.js?v=26';
+import { sfx } from '../core/audio.js?v=26';
+import { EXPRESSION, setMood } from '../art/expressions.js?v=26';
+import { actorFor } from '../art/rig.js?v=26';
 
 // The conversation box, in the register of the handheld reference: a parchment
 // panel with a dark-brown rounded border, the speaker's bust framed at the top
@@ -86,6 +85,13 @@ const DIALOGUE = {
     '[happy] Early for the eleven o\'clock, as always. I sign off the review and I remember your name — both matter.',
     '[ambitious] Partnerships are long games. Be the person who shows up prepared and leaves on time.',
     '[happy] Good to see you on the floor. Now go make the client glad they picked us.'
+  ],
+  // The one NPC: the security guard at the door. He speaks for the room, not
+  // for a department — the post, the badge, the six o'clock rule.
+  security: [
+    '[happy] Morning. Badge on, mind the mat — I have watched this door since 2016 and it has never once been in a hurry.',
+    '[curious] Your chair is on the plan you picked from. The floor will walk you to it; after that, the whole room is yours to wander.',
+    '[ambitious] Coffee is on the right, the printer is temperamental, and clock-out is at six — not half past. Any questions, I am right here.'
   ]
 };
 
@@ -147,21 +153,21 @@ function pitchFor(id) {
   return 0.9 + (h % 5) * 0.07;
 }
 
-// The colleague standing right beside the player, if any. Orthogonal adjacency
-// keeps "next to" honest on a tile grid.
+// The colleague standing right beside the player, if any — the guard, or a
+// live person off the wire. Orthogonal adjacency keeps "next to" honest on a
+// tile grid; a remote neighbour opens the floor chat instead of a script.
 export function nearestTalkable(state) {
   if (state.phase !== 'play' || !state.player) return null;
   const p = state.player;
-  let best = null;
-  for (const n of state.npcs) {
+  for (const n of [...state.npcs, ...state.remotes.values()]) {
     const d = Math.abs(n.tx - p.tx) + Math.abs(n.ty - p.ty);
-    if (d === 1) { best = n; break; }
+    if (d === 1) return n;
   }
-  return best;
+  return null;
 }
 
 export function openDialogue(state, npc) {
-  const pages = buildPages(npc.id);
+  const pages = buildPages(npc.dialogueKey || npc.id);
   state.dialogue = { npc, pages, page: 0, shown: 0, t: 0, pitch: pitchFor(npc.id) };
   // Both turn to face each other; a seated colleague stays seated.
   faceToward(state.player, npc.tx, npc.ty);
@@ -240,7 +246,6 @@ function heart(g, x, y, on) {
 export function drawDialogue(g, state) {
   const d = state.dialogue;
   if (!d) return;
-  const who = CHARACTERS.find((c) => c.id === d.npc.id);
   const lines = d.pages[d.page].lines;
   const full = lines.join('').length;
   const done = d.shown >= full;
@@ -271,12 +276,13 @@ export function drawDialogue(g, state) {
   g.lineWidth = 2;
   g.strokeStyle = BORDER;
   g.strokeRect(PX + 1, PY + 1, PS - 2, PS - 2);
-  const bust = bustFor(d.npc.id);
+  const bust = bustFor(d.npc.artId || d.npc.id);
   if (bust) g.drawImage(bust, 0, 0, bust.width, bust.height, PX + 4, PY + 4, PS - 8, PS - 8);
   px(g, PX + 3, PY + 3, PS - 6, 1, PARCH_HI);
 
-  // Name tag, then the typewriter text.
-  text(g, (who ? who.name : d.npc.name).toUpperCase(), TEXT_X, BOX_Y + 13, BORDER, 'left', 7);
+  // Name tag, then the typewriter text. The name is the one the floor knows
+  // them by — "Pak Philip" at the post, a badge name for a live colleague.
+  text(g, d.npc.name.toUpperCase(), TEXT_X, BOX_Y + 13, BORDER, 'left', 7);
   px(g, TEXT_X, BOX_Y + 16, TEXT_W, 1, PARCH_LO);
 
   let left = d.shown;

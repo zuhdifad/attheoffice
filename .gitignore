@@ -1,5 +1,7 @@
 .DS_Store
 .qa-profile/
+.qa-live-profile/
+.qa-vis-profile/
 qa/
 screenshot*.png
 __pycache__/

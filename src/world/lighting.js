@@ -1,6 +1,6 @@
-import { TILE, BUFFER_W, BUFFER_H } from '../core/config.js?v=24';
-import { canvas } from '../core/draw.js?v=24';
-import { vignette } from '../art/backdrop.js?v=24';
+import { TILE, BUFFER_W, BUFFER_H } from '../core/config.js?v=26';
+import { canvas } from '../core/draw.js?v=26';
+import { vignette } from '../art/backdrop.js?v=26';
 
 // Post pass: daylight out of the north glazing, pooled light under the lamps,
 // then a vignette that pulls the eye to the middle of the room.

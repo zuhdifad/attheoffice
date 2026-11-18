@@ -1,27 +1,34 @@
-import { FRAME_MS } from './core/config.js?v=24';
-import { state, resetDay } from './core/state.js?v=24';
-import { g, screen, buf, applyZoom, bindResize, present } from './core/display.js?v=24';
-import { setInputEnabled, setPadDirection, setPadWork, tapConfirm, tapBack } from './core/input.js?v=24';
-import { setMuted, sfx, setAmbience } from './core/audio.js?v=24';
-import { CHARACTERS, PAL } from './art/palette.js?v=24';
-import { loadRoster, loadRig } from './art/characters.js?v=24';
-import { loadActorRig } from './art/rig.js?v=24';
-import { loadAtlas } from './art/tiles.js?v=24';
-import { buildPlace } from './world/places/index.js?v=24';
-import { createMap } from './world/map.js?v=24';
-import { primeWorld } from './world/ground.js?v=24';
-import { doorPassable } from './world/machines.js?v=24';
-import { buildNpcs } from './entities/npc.js?v=24';
-import { createPlayer } from './entities/player.js?v=24';
-import { centerCamera, setView, toggleView as toggleCamera } from './world/camera.js?v=24';
-import { primeResidency } from './world/residency.js?v=24';
-import { resetFx, sparkle } from './world/fx.js?v=24';
-import * as wall from './ui/wallclock.js?v=24';
-import * as clockin from './screens/clockin.js?v=24';
-import * as select from './screens/select.js?v=24';
-import * as world from './screens/world.js?v=24';
-import * as rigScreen from './screens/rig.js?v=24';
-import * as facesScreen from './screens/faces.js?v=24';
+import { FRAME_MS } from './core/config.js?v=26';
+import { state, resetDay } from './core/state.js?v=26';
+import { g, screen, buf, applyZoom, bindResize, present } from './core/display.js?v=26';
+import { setInputEnabled, setPadDirection, setPadWork, tapConfirm, tapBack } from './core/input.js?v=26';
+import { setMuted, sfx, setAmbience } from './core/audio.js?v=26';
+import { net } from './core/net.js?v=26';
+import { CHARACTERS, PAL } from './art/palette.js?v=26';
+import { loadRoster, loadRig, loadRigFar } from './art/characters.js?v=26';
+import { loadActorRig, actorFor } from './art/rig.js?v=26';
+import { setMood } from './art/expressions.js?v=26';
+import { loadAtlas } from './art/tiles.js?v=26';
+import { buildPlace } from './world/places/index.js?v=26';
+import { createMap } from './world/map.js?v=26';
+import { primeWorld } from './world/ground.js?v=26';
+import { doorPassable } from './world/machines.js?v=26';
+import { buildNpcs } from './entities/npc.js?v=26';
+import { createPlayer } from './entities/player.js?v=26';
+import { createRemote, applyPose, remoteSay, remoteEmote, removeRemote } from './entities/remote.js?v=26';
+import { startAction } from './entities/actions.js?v=26';
+import { findPath } from './entities/path.js?v=26';
+import { allSeats, seatByNum } from './world/seats.js?v=26';
+import { centerCamera, setView, toggleView as toggleCamera } from './world/camera.js?v=26';
+import { primeResidency } from './world/residency.js?v=26';
+import { resetFx, sparkle } from './world/fx.js?v=26';
+import * as wall from './ui/wallclock.js?v=26';
+import * as chat from './ui/chat.js?v=26';
+import * as clockin from './screens/clockin.js?v=26';
+import * as select from './screens/select.js?v=26';
+import * as world from './screens/world.js?v=26';
+import * as rigScreen from './screens/rig.js?v=26';
+import * as facesScreen from './screens/faces.js?v=26';
 
 // The router. Only one screen is canvas-drawn; the start screen, the badge
 // questions and the picker are DOM and keep their own markup. ?rig=1 swaps the
@@ -87,11 +94,42 @@ async function boot(who) {
   // Far sheets for the whole cast, near sheets only for whoever the opening
   // frame can show; the residency manager fetches the rest as you walk to them.
   // Layered atlases are small enough to stay resident, so the whole cast is
-  // probed once; ids without meta.json fall back and never retry.
+  // probed once; ids without meta.json fall back and never retry. The live
+  // colleagues already on the floor load their dolls the same way.
   await Promise.all([
     primeResidency(state),
-    ...state.npcs.map((n) => loadActorRig(n.id))
+    ...state.npcs.map((n) => loadActorRig(n.id)),
+    ...[...state.remotes.values()].flatMap((r) => [loadActorRig(r.artId), loadRigFar(r.artId)])
   ]);
+
+  // The chair you chose on the plan is yours unless a live colleague already
+  // holds it — then the nearest free one takes its place, and the floor says so.
+  claimChosenSeat();
+
+  // Clocking in is joining the room: the badge name, the doll, the tint and
+  // the seat go out on the wire, and everyone else's floor gains you at once.
+  net.join({
+    name: state.playerName || who.name,
+    charId: who.id,
+    tint: who.tint,
+    role: state.role || who.role,
+    seatNum: state.seatNum
+  });
+  chat.setVisible(true);
+  chat.setOnline(1 + state.remotes.size);
+  chat.system(`You clocked in — ${state.playerName || who.name}, ${state.seat || 'Level 22'}.`, false, true);
+
+  // The clock-in walk: appear in front of the door, then the floor steers you
+  // to the chair you decided on. Any direction key takes the wheel back.
+  const seat = seatByNum(state.map, state.seatNum);
+  if (seat) {
+    const path = findPath(state.map, state.occupied, state.place.spawn, seat.approach);
+    state.autowalk = { seat, path: path || [], delay: 50, retry: 0, sitting: false };
+    state.hint = {
+      text: `WALKING TO SEAT ${String(state.seatNum).padStart(2, '0')} — ANY ARROW TAKES THE WHEEL`,
+      t: 1500
+    };
+  }
 
   document.getElementById('gameArea').style.display = 'block';
   document.body.classList.add('in-game');
@@ -116,6 +154,31 @@ async function boot(who) {
   }
 }
 
+// A peer may hold the chair you picked while you were answering the questions.
+// The plan shows it live, but two people can still confirm the same second:
+// the later clock-in yields, takes the nearest free chair, and says so.
+function claimChosenSeat() {
+  const taken = net.takenSeats();
+  const holder = taken.get(state.seatNum);
+  if (!holder || holder.id === net.id) return;
+  const { seats } = allSeats();
+  const from = state.seatTile || state.place.spawn;
+  let best = null, bd = Infinity;
+  for (const s of seats) {
+    if (taken.has(s.num)) continue;
+    const live = seatByNum(state.map, s.num);
+    if (!live || live.occupiedBy) continue;
+    const d = Math.abs(live.x - from.x) + Math.abs(live.y - from.y);
+    if (d < bd) { bd = d; best = { info: s, live }; }
+  }
+  if (!best) return;
+  const old = String(state.seatNum).padStart(2, '0');
+  state.seatNum = best.info.num;
+  state.seat = best.info.label;
+  state.seatTile = { x: best.live.x, y: best.live.y };
+  chat.system(`Seat ${old} was taken by ${holder.name} — you are at ${best.info.label} now.`, false, true);
+}
+
 function restart() {
   sfx.ui();
   boot(state.chosen);
@@ -123,6 +186,8 @@ function restart() {
 
 function changeWorker() {
   sfx.back();
+  net.leave();
+  chat.setVisible(false);
   state.running = false;
   looping = false;
   setInputEnabled(false);
@@ -165,13 +230,19 @@ function clockOut() {
   state.clockedOut = true;
   state.askingClockOut = false;
   state.phase = 'done';
+  state.autowalk = null;
+  state.hint = null;
   state.result = {
     inAt: state.clockedInAt,
     outAt: wall.now(),
     steps: state.player.steps,
     talks: state.talks.size,
-    total: state.npcs.length
+    total: state.npcs.length + state.remotes.size
   };
+  // Leaving the room is immediate on every other floor: the puppet goes, the
+  // chair frees, and the contact list says goodbye.
+  net.leave();
+  chat.setVisible(false);
   clockOutModal.hidden = true;
   clockOutBtn.hidden = true;
   wall.markClockedOut();
@@ -188,6 +259,111 @@ function bindClockOut() {
     if (e.key === 'Escape') { e.preventDefault(); dismissClockOut(); }
     else if (e.key === 'Enter') { e.preventDefault(); clockOut(); }
   });
+}
+
+// ---- the live floor -------------------------------------------------------------
+// One handler per wire event. A join is a person appearing at the door; a pose
+// is their next step; a chat line is a bubble and a dock row; a leave is the
+// room saying goodbye. The puppets themselves live in entities/remote.js.
+
+function bindNet() {
+  net.on('join', (rec) => {
+    if (state.remotes.has(rec.id)) return;
+    const r = createRemote(rec);
+    state.remotes.set(rec.id, r);
+    loadActorRig(rec.charId);
+    loadRigFar(rec.charId);
+    if (rec.pose && state.map) applyPose(state, r, rec);
+    if (state.running && state.mode === 'world') {
+      chat.system(`${rec.name} clocked in.`);
+      chat.setOnline(1 + state.remotes.size);
+      sfx.arrive();
+      sparkle(r.tx, r.ty, r.tint || PAL.amber);
+    }
+  });
+
+  net.on('pose', (rec) => {
+    let r = state.remotes.get(rec.id);
+    if (!r) {
+      // A pose can outrun the hello on a busy channel: the person is real either way.
+      r = createRemote(rec);
+      state.remotes.set(rec.id, r);
+      loadActorRig(rec.charId);
+      loadRigFar(rec.charId);
+      chat.setOnline(1 + state.remotes.size);
+    }
+    if (state.map) applyPose(state, r, rec);
+  });
+
+  net.on('chat', (m) => {
+    const own = m.id === net.id;
+    chat.push(m, own);
+    const line = m.text.length > 44 ? `${m.text.slice(0, 43)}…` : m.text;
+    if (own) {
+      if (state.player) { state.player.say = 260; state.player.line = line; }
+    } else {
+      const r = state.remotes.get(m.id);
+      if (r) remoteSay(r, m.text);
+    }
+  });
+
+  net.on('emote', (m) => {
+    const r = state.remotes.get(m.id);
+    if (r && state.map) remoteEmote(state, r, m.kind);
+    // A nudge aimed at you is felt: the camera gives one small knock.
+    if (m.kind === 'nudge' && m.to === net.id) {
+      state.cam.shake = 3;
+      sfx.arrive();
+    }
+  });
+
+  net.on('leave', (rec) => {
+    const r = state.remotes.get(rec.id);
+    if (r) {
+      if (state.map) {
+        sparkle(r.tx, r.ty, r.tint || PAL.steel);
+        removeRemote(state, r);
+      } else {
+        state.remotes.delete(rec.id);
+      }
+    }
+    if (state.running && state.mode === 'world') {
+      chat.system(`${rec.name} clocked out.`, true);
+      chat.setOnline(1 + state.remotes.size);
+    }
+  });
+}
+
+// The two emotes, from the dock's pills. A wave near the post is waved back —
+// the guard is the one NPC, and he is polite.
+function waveLocal() {
+  if (!state.running || state.mode !== 'world' || state.phase !== 'play') return;
+  const p = state.player;
+  if (!p.moving && !p.seated) startAction(p, 'wave');
+  p.say = 160;
+  p.line = '*waves*';
+  net.emote('wave');
+  const g = state.npcs.find((n) => n.guard);
+  if (g && Math.abs(g.tx - p.tx) + Math.abs(g.ty - p.ty) <= 4) {
+    startAction(g, 'wave');
+    g.say = 180;
+    g.line = 'Morning! Badge looks good.';
+    setMood(actorFor(g), 'happy', 180);
+  }
+}
+
+// A nudge lands on the nearest live colleague — BBM's buzz, felt as a knock.
+function nudgeLocal() {
+  if (!state.running || state.mode !== 'world' || state.phase !== 'play') return;
+  const p = state.player;
+  let best = null, bd = 4;
+  for (const r of state.remotes.values()) {
+    const d = Math.abs(r.tx - p.tx) + Math.abs(r.ty - p.ty);
+    if (d < bd) { bd = d; best = r; }
+  }
+  net.emote('nudge', best ? best.id : null);
+  p.say = 160;
+  p.line = best ? `*nudges ${best.name}*` : '*nudge*';
 }
 
 // ---- pause -------------------------------------------------------------------
@@ -278,6 +454,12 @@ function bindChrome() {
   window.addEventListener('keydown', (e) => {
     if (!state.running) return;
     const k = e.key.toLowerCase();
+    // While the chat dock is open the keys belong to the field: typing a 'v'
+    // must not zoom the room. Only Esc leaves, and it closes the dock first.
+    if (chat.isOpen()) {
+      if (k === 'escape') { e.preventDefault(); chat.close(); }
+      return;
+    }
     if (k === 'm') { mute.click(); return; }
     // The contact sheet owns its own keys; world shortcuts would zoom a room
     // that is not there.
@@ -286,6 +468,9 @@ function bindChrome() {
     if (k === 'escape') {
       if (!clockOutModal.hidden) return;
       togglePause();
+    }
+    else if (k === 't') {
+      if (state.phase === 'play' && !state.askingClockOut) { e.preventDefault(); chat.toggle(); }
     }
     else if (k === 'r' && state.phase === 'done') restart();
     else if (k === 'c' && state.phase === 'done') changeWorker();
@@ -354,13 +539,17 @@ async function main() {
   bindResize(state);
   bindChrome();
   bindClockOut();
+  bindNet();
+  chat.bind({ onWave: waveLocal, onNudge: nudgeLocal });
   wall.bind({ onAfterHours: askClockOut });
 
   clockin.bind({
-    onStartToWork: ({ name, floor, seat, role, partner }) => {
+    onStartToWork: ({ name, floor, seat, seatNum, seatTile, role, partner }) => {
       state.playerName = name;
       state.floor = floor;
       state.seat = seat;
+      state.seatNum = seatNum || 0;
+      state.seatTile = seatTile || null;
       state.role = role;
       state.partner = partner;
       select.open();
@@ -368,10 +557,11 @@ async function main() {
   });
   select.bind({ onConfirm: (who) => boot(who) });
 
-  // A read-only handle for QA: the live snapshot, the wall clock and the frame
-  // buffer, so a test can assert where the player is and what was actually
-  // painted without guessing from screenshots.
-  window.__office = { state, wall, buffer: buf };
+  // A read-only handle for QA: the live snapshot, the wall clock, the frame
+  // buffer, the wire and the seat registry, so a test can assert where the
+  // player is, who else is on the floor and what was actually painted without
+  // guessing from screenshots.
+  window.__office = { state, wall, buffer: buf, net, chat, seats: allSeats() };
 
   // ?rig=1 is the actor contact sheet: every animation and direction of every
   // colleague, layered rigs and legacy fallbacks alike, on the same loop and

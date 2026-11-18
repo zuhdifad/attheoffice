@@ -1,5 +1,5 @@
-import { TILE } from '../core/config.js?v=24';
-import { PAL } from '../art/palette.js?v=24';
+import { TILE } from '../core/config.js?v=26';
+import { PAL } from '../art/palette.js?v=26';
 
 // A fixed pool, so a long day never allocates its way into a stutter and a
 // restart never leaves an emitter running. Everything is in world pixels.

@@ -1,5 +1,5 @@
-import { TILE, FRAME_MS, BUFFER_W, BUFFER_H, VIEWS } from '../core/config.js?v=24';
-import { WALL_RISE } from '../art/props.js?v=24';
+import { TILE, FRAME_MS, BUFFER_W, BUFFER_H, VIEWS } from '../core/config.js?v=26';
+import { WALL_RISE } from '../art/props.js?v=26';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 

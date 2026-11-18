@@ -15,19 +15,33 @@ export const state = {
   chosen: null,
   // Asked on the title card before the picker: the player's own name, the level
   // they say they work on, the seat and role they claim, and the teammate they
-  // bring in by email. A restart keeps all of it.
+  // bring in by email. A restart keeps all of it. seatNum is the chair's number
+  // on the Level 22 plan (01..32); seatTile is where it stands.
   playerName: '',
   floor: '',
   seat: '',
+  seatNum: 0,
+  seatTile: null,
   role: '',
   partner: '',
   player: null,
+  // The only NPC is the security guard at the door. Everyone else on the floor
+  // is a live person: remotes holds one puppet per clocked-in colleague, keyed
+  // by their session, fed by core/net.js ten times a second.
   npcs: [],
+  remotes: new Map(),
   occupied: new Set(),
   keepClear: new Set(),
   place: null,
   map: null,
   walkable: () => false,
+  // The clock-in walk: { seat, path, delay, retry } while the game is steering
+  // the player from the door to their chosen chair, null once they are seated
+  // or a direction key has taken the wheel.
+  autowalk: null,
+  // A quiet chip at the foot of the picture: { text, t } while a beat of
+  // guidance is on screen (the walk to the chair, the first sit), null after.
+  hint: null,
 
   cam: { x: 0, y: 0, shake: 0 },
   // Which of the two framings is on screen: 'near' or 'far', both drawn into the
@@ -57,8 +71,9 @@ export const state = {
   dialogue: null
 };
 
-// A restart happens in place: the room and the crowd are rebuilt, but the
-// chosen worker and the options the player set survive.
+// A restart happens in place: the room and the guard are rebuilt, but the
+// chosen worker, the badge answers and the options survive. The live floor
+// survives too — the people already clocked in do not vanish on your restart.
 export function resetDay(keep) {
   state.phase = 'brief';
   state.paused = false;
@@ -69,6 +84,8 @@ export function resetDay(keep) {
   state.talks = new Set();
   state.result = null;
   state.dialogue = null;
+  state.autowalk = null;
+  state.hint = null;
   state.cam.shake = 0;
   state.zoom = null;
   if (keep) Object.assign(state, keep);

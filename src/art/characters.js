@@ -1,5 +1,5 @@
-import { CHAR_W, CHAR_H, SHEET_COLS, DIR_ROW, WALK_FRAMES, RIG } from '../core/config.js?v=24';
-import { CHARACTERS } from './palette.js?v=24';
+import { CHAR_W, CHAR_H, SHEET_COLS, DIR_ROW, WALK_FRAMES, RIG } from '../core/config.js?v=26';
+import { CHARACTERS } from './palette.js?v=26';
 
 export { CHARACTERS };
 

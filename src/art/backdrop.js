@@ -1,5 +1,5 @@
-import { BUFFER_W, BUFFER_H, SCREEN_W, SCREEN_H } from '../core/config.js?v=24';
-import { px, vgrad } from '../core/draw.js?v=24';
+import { BUFFER_W, BUFFER_H, SCREEN_W, SCREEN_H } from '../core/config.js?v=26';
+import { px, vgrad } from '../core/draw.js?v=26';
 
 // One cached vignette is shared by the menus and the world, which is what stops
 // the start screen from looking like a different product than the room. It is

@@ -1,4 +1,4 @@
-import { BUFFER_W, BUFFER_H } from './config.js?v=24';
+import { BUFFER_W, BUFFER_H } from './config.js?v=26';
 
 export const screen = document.getElementById('gameCanvas');
 // The picture is always a full-buffer opaque blit, so the screen needs no

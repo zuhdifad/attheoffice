@@ -1,21 +1,26 @@
-import { SCREEN_W, SCREEN_H, BUFFER_W, BUFFER_H, VIEWS, FRAME_MS } from '../core/config.js?v=24';
-import { heldDirection, readActions } from '../core/input.js?v=24';
-import { updatePlayer, faceToward } from '../entities/player.js?v=24';
-import { updateNpcs } from '../entities/npc.js?v=24';
-import { ACTIONS, framesOf, startAction, tickAction } from '../entities/actions.js?v=24';
-import { actorFor, updateActor } from '../art/rig.js?v=24';
-import { updateCamera } from '../world/camera.js?v=24';
-import { updateResidency } from '../world/residency.js?v=24';
-import { drawWorld } from '../world/view.js?v=24';
-import { drawHud } from '../ui/hud.js?v=24';
-import { drawResults } from '../ui/results.js?v=24';
-import { updateFx, dust, mote } from '../world/fx.js?v=24';
-import { updateMachines, doorPassable } from '../world/machines.js?v=24';
-import { PAL } from '../art/palette.js?v=24';
-import { text, px } from '../core/draw.js?v=24';
-import { sfx } from '../core/audio.js?v=24';
-import { now, fmtHM } from '../ui/wallclock.js?v=24';
-import { nearestTalkable, openDialogue, updateDialogue, closeDialogue, drawDialogue } from '../ui/dialogue.js?v=24';
+import { SCREEN_W, SCREEN_H, BUFFER_W, BUFFER_H, VIEWS, FRAME_MS } from '../core/config.js?v=26';
+import { heldDirection, readActions } from '../core/input.js?v=26';
+import { updatePlayer, faceToward } from '../entities/player.js?v=26';
+import { updateNpcs } from '../entities/npc.js?v=26';
+import { updateRemotes } from '../entities/remote.js?v=26';
+import { findPath, dirOf } from '../entities/path.js?v=26';
+import { ACTIONS, framesOf, startAction, tickAction } from '../entities/actions.js?v=26';
+import { actorFor, updateActor } from '../art/rig.js?v=26';
+import { updateCamera } from '../world/camera.js?v=26';
+import { updateResidency } from '../world/residency.js?v=26';
+import { drawWorld } from '../world/view.js?v=26';
+import { drawHud } from '../ui/hud.js?v=26';
+import { drawResults } from '../ui/results.js?v=26';
+import { updateFx, dust, mote } from '../world/fx.js?v=26';
+import { updateMachines, doorPassable } from '../world/machines.js?v=26';
+import { PAL } from '../art/palette.js?v=26';
+import { text, px } from '../core/draw.js?v=26';
+import { sfx } from '../core/audio.js?v=26';
+import { now, fmtHM } from '../ui/wallclock.js?v=26';
+import { nearestTalkable, openDialogue, updateDialogue, closeDialogue, drawDialogue } from '../ui/dialogue.js?v=26';
+import { net } from '../core/net.js?v=26';
+import { allSeats, infoFor } from '../world/seats.js?v=26';
+import * as chat from '../ui/chat.js?v=26';
 
 let reveal = 0;
 
@@ -24,7 +29,8 @@ export function reset() {
 }
 
 // The whole game: walk the floor, talk to whoever is beside you. No objectives,
-// no score — the room is the content. The clock keeps real time inside it.
+// no score — the room is the content. The clock keeps real time inside it, and
+// everyone else on it is a live person off the wire.
 export function update(state) {
   state.tick++;
 
@@ -33,24 +39,32 @@ export function update(state) {
 
   if (live) {
     // A (Z), the TALK pad, or a click on the room beside a colleague opens a
-    // conversation; B (X) backs out of one. While the box is up the player and
-    // the crowd freeze.
+    // conversation — or the floor chat, if the neighbour is a real person.
+    // B (X) backs out of one. While the box is up the player and the guard
+    // freeze; the live floor keeps breathing either way.
     if (state.dialogue) {
       if (input.backTap) closeDialogue(state);
       else updateDialogue(state, input);
     } else if (input.workTap || input.confirmTap) {
       const n = nearestTalkable(state);
       if (n) {
-        openDialogue(state, n);
         state.talks.add(n.id);
+        if (n.remote) chat.open();
+        else openDialogue(state, n);
       } else {
         useProp(state);
       }
     }
 
     if (!state.dialogue) {
-      playerActionTick(state);
-      updatePlayer(state.player, state.walkable, heldDirection());
+      // The clock-in walk steers until a direction key takes the wheel: from
+      // that press on, the floor is yours again — including standing up from
+      // the chair the game sat you in.
+      const manual = heldDirection();
+      if (manual && state.autowalk) { state.autowalk = null; state.hint = null; }
+      const held = manual || autoDir(state);
+      playerActionTick(state, held);
+      updatePlayer(state.player, state.walkable, held);
       if (state.player.arrived) {
         dust(state.player.tx, state.player.ty);
         sfx.step(state.player.steps % 2 === 0);
@@ -68,6 +82,25 @@ export function update(state) {
     if (state.phase === 'done') reveal++;
   }
 
+  // The live floor is not part of the pause: colleagues keep walking, talking
+  // and looking at you while your own card is up, the way a room does.
+  updateRemotes(state);
+  if (state.player && state.player.say > 0) state.player.say--;
+  if (state.hint && --state.hint.t <= 0) state.hint = null;
+
+  // Ten poses a second, straight off the sim: tile, pixels, facing, action
+  // clock and seat. Every other client eases between them, so a walk reads as
+  // a walk on every screen at once.
+  if (state.player && net.joined && state.tick % 6 === 0) {
+    const p = state.player;
+    net.pose({
+      tx: p.tx, ty: p.ty, px: p.px, py: p.py,
+      dir: p.dir, frame: p.frame, action: p.action, act: p.act,
+      moving: p.moving, mx: p.to ? p.to.x : null, my: p.to ? p.to.y : null,
+      seated: p.seated, seatNum: state.seatNum
+    });
+  }
+
   updateFx();
   updateCamera(state);
   updateResidency(state);
@@ -80,6 +113,7 @@ export function update(state) {
     const dt = FRAME_MS / 1000;
     updateActor(actorFor(state.player), dt);
     for (const n of state.npcs) updateActor(actorFor(n), dt);
+    for (const r of state.remotes.values()) updateActor(actorFor(r), dt);
   }
   state.cam.shake *= 0.86;
   if (state.cam.shake < 0.05) state.cam.shake = 0;
@@ -178,9 +212,8 @@ function useProp(state) {
   }
 }
 
-function playerActionTick(state) {
+function playerActionTick(state, held) {
   const p = state.player;
-  const held = heldDirection();
 
   // Locomotion reads off the same machine: a stride is the walk action, and
   // landing settles back to idle unless a chair or a sip owns the pose.
@@ -212,6 +245,13 @@ function playerActionTick(state) {
   const settled = tickAction(p);
   if (settled === 'sit') {
     p.working = true; // rooted on the chair until a key says otherwise
+    // The clock-in walk ends here: the chair is yours, the laptop opens if
+    // the seat works at one, and the floor is free to walk again.
+    if (state.autowalk && state.autowalk.sitting) {
+      if (workSeat(state, p.seat)) startAction(p, 'laptop');
+      state.autowalk = null;
+      state.hint = { text: `SEAT ${String(state.seatNum).padStart(2, '0')} IS YOURS — ARROWS TO STAND AND ROAM`, t: 300 };
+    }
   } else if (settled === 'idle') {
     if (p.leaving) {
       state.map.releaseSeat(p.leaving, p.id);
@@ -221,6 +261,80 @@ function playerActionTick(state) {
     }
     p.working = false;
   }
+}
+
+// ---- the clock-in walk ---------------------------------------------------------
+// The game steers you from the door to the chair you chose on the plan, then
+// hands the wheel back for good. A direction key cancels it mid-stride; a
+// colleague standing in the aisle makes it wait and replan; a closed door is
+// worked open the same way a manual stride works it.
+
+function autoDir(state) {
+  const aw = state.autowalk;
+  const p = state.player;
+  if (!aw || p.seated || p.moving || p.working) return null;
+  if (aw.delay > 0) { aw.delay--; return null; }
+
+  const a = aw.seat.approach;
+  if (p.tx === a.x && p.ty === a.y) {
+    if (!aw.seat.occupiedBy || aw.seat.occupiedBy === p.id) {
+      sitDown(state, aw.seat);
+      aw.sitting = true;
+    } else {
+      reassignSeat(state, aw);
+    }
+    return null;
+  }
+
+  // Consume whatever tiles the last stride already landed on.
+  while (aw.path.length && aw.path[0].x === p.tx && aw.path[0].y === p.ty) aw.path.shift();
+  if (!aw.path.length) {
+    if (++aw.retry % 24 === 1) {
+      aw.path = findPath(state.map, state.occupied, { x: p.tx, y: p.ty }, a) || [];
+    }
+    return null;
+  }
+
+  const next = aw.path[0];
+  const dir = dirOf(p.tx, p.ty, next.x, next.y);
+  if (!state.walkable(next.x, next.y)) {
+    // A doorway is not a wall: face it and the reach opens it, exactly as a
+    // manual stride does. Anything else — a colleague in the aisle — waits.
+    const isDoor = state.map.doors.some((d) =>
+      next.x >= d.x && next.x < d.x + d.def.w && next.y >= d.y && next.y < d.y + d.def.h);
+    if (isDoor) return dir;
+    if (++aw.retry % 24 === 1) {
+      const np = findPath(state.map, state.occupied, { x: p.tx, y: p.ty }, a);
+      if (np) { aw.path = np; aw.retry = 0; }
+    }
+    return null;
+  }
+  aw.retry = 0;
+  return dir;
+}
+
+// Someone clocked into your chair while you were walking to it: take the
+// nearest free one instead, tell the floor, and keep going.
+function reassignSeat(state, aw) {
+  const p = state.player;
+  const { seats } = allSeats();
+  let best = null, bd = Infinity;
+  for (const s of seats) {
+    const live = state.map.seatAt(s.seat.x, s.seat.y);
+    if (!live || live.occupiedBy) continue;
+    const d = Math.abs(live.approach.x - p.tx) + Math.abs(live.approach.y - p.ty);
+    if (d < bd) { bd = d; best = { info: s, live }; }
+  }
+  if (!best) { state.autowalk = null; return; }
+  const old = state.seatNum;
+  state.seatNum = best.info.num;
+  state.seat = best.info.label;
+  state.seatTile = { x: best.live.x, y: best.live.y };
+  aw.seat = best.live;
+  aw.path = findPath(state.map, state.occupied, { x: p.tx, y: p.ty }, best.live.approach) || [];
+  aw.retry = 0;
+  chat.system(`Seat ${String(old).padStart(2, '0')} was taken — you are at ${best.info.label} now.`, false, true);
+  state.hint = { text: `NEW SEAT: ${best.info.short} — WALKING THERE NOW`, t: 240 };
 }
 
 export function draw(g, state) {
@@ -240,8 +354,9 @@ export function draw(g, state) {
 
 // ---- pause details ------------------------------------------------------------
 // Esc pauses the room and hands you the badge: who you clocked in as, where you
-// sit, who came with you, how the day is going. Parchment, like everything the
-// floor writes on.
+// sit, who came with you, how the day is going — and the whole control card, so
+// every key the floor answers to is written down in one place. Parchment, like
+// everything the floor writes on.
 
 const INK = '#3a2c1a';
 const BORDER = '#5a4632';
@@ -260,6 +375,21 @@ function roundRect(g, x, y, w, h, r) {
   g.closePath();
 }
 
+// The control card: every button the game answers to, in two columns of
+// key → what it does. The touch pads ride the same letters (A = Z, B = X).
+const CONTROLS = [
+  ['ARROWS / WASD', 'WALK'],
+  ['Z / ENTER / A', 'TALK · SIT · SIP'],
+  ['X / B', 'CLOSE TALK'],
+  ['T', 'FLOOR CHAT'],
+  ['CLICK / TAP', 'CONFIRM'],
+  ['V / WHEEL', 'ZOOM IN / OUT'],
+  ['M', 'SOUND ON / OFF'],
+  ['ESC', 'PAUSE / RESUME'],
+  ['R / C', 'RESTART / WORKER'],
+  ['CHAT PILLS', 'WAVE · NUDGE']
+];
+
 function pauseDetails(g, state) {
   const d = now();
   const date = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -268,7 +398,7 @@ function pauseDetails(g, state) {
   g.fillStyle = 'rgba(8,11,17,0.7)';
   g.fillRect(0, 0, SCREEN_W, SCREEN_H);
 
-  const w = 300, h = 166;
+  const w = 360, h = 232;
   const x = Math.round(SCREEN_W / 2 - w / 2);
   const y = Math.round(SCREEN_H / 2 - h / 2);
 
@@ -300,17 +430,29 @@ function pauseDetails(g, state) {
     ['PARTNER', state.partner || '—'],
     ['WORKER', who ? `${who.name} · ${who.dept}` : '—'],
     ['CLOCKED IN', state.clockedInAt ? fmtHM(state.clockedInAt) : '—'],
-    ['COLLEAGUES', `${state.talks.size}/${state.npcs.length}`]
+    ['PEOPLE MET', `${state.talks.size}/${state.npcs.length + state.remotes.size}`]
   ];
   rows.forEach(([label, value], i) => {
-    const ry = y + 44 + i * 13;
+    const ry = y + 40 + i * 12;
     text(g, label, x + 14, ry, FAINT, 'left', 7);
     text(g, String(value), x + w - 14, ry, INK, 'right', 8);
   });
 
-  px(g, x + 14, y + 140, w - 28, 1, PARCH_LO);
+  // The control card, under the badge: two columns, key in brown, deed in ink.
+  px(g, x + 14, y + 124, w - 28, 1, PARCH_LO);
+  text(g, 'CONTROLS', x + 14, y + 136, FAINT, 'left', 7);
+  CONTROLS.forEach(([key, deed], i) => {
+    const col = i < 5 ? 0 : 1;
+    const row = i % 5;
+    const cx = x + 14 + col * 170;
+    const ry = y + 148 + row * 12;
+    text(g, key, cx, ry, BORDER, 'left', 7);
+    text(g, deed, cx + 72, ry, INK, 'left', 7);
+  });
+
+  px(g, x + 14, y + 208, w - 28, 1, PARCH_LO);
   const blink = Math.floor(state.tick / 24) % 2 === 0;
-  text(g, 'ESC  RESUME', x + w / 2, y + 156, blink ? INK : FAINT, 'center', 8);
+  text(g, 'ESC  RESUME', x + w / 2, y + 222, blink ? INK : FAINT, 'center', 8);
 
   g.restore();
 }

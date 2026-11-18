@@ -1,5 +1,5 @@
-import { TILE, BUFFER_W, BUFFER_H, VIEWS } from '../core/config.js?v=24';
-import { loadRigNear, loadRigFar, evictRigNear } from '../art/characters.js?v=24';
+import { TILE, BUFFER_W, BUFFER_H, VIEWS } from '../core/config.js?v=26';
+import { loadRigNear, loadRigFar, evictRigNear } from '../art/characters.js?v=26';
 
 // A near sheet decodes to ~18.5MB, so only the player and whoever the close view
 // can reach stay resident; far sheets cost a tenth of that and all thirteen live
@@ -23,11 +23,14 @@ function bands(state) {
 
 const inside = (n, b) => n.px >= b.x0 && n.px <= b.x1 && n.py >= b.y0 && n.py <= b.y1;
 
+// A remote's id is a session, not a doll: the rig it wears is its artId.
+const artOf = (n) => n.artId || n.id;
+
 export function updateResidency(state) {
   const { load, evict } = bands(state);
-  for (const n of state.npcs) {
-    if (inside(n, load)) loadRigNear(n.id);
-    else if (!inside(n, evict)) evictRigNear(n.id);
+  for (const n of [...state.npcs, ...state.remotes.values()]) {
+    if (inside(n, load)) loadRigNear(artOf(n));
+    else if (!inside(n, evict)) evictRigNear(artOf(n));
   }
 }
 
@@ -35,8 +38,9 @@ export function updateResidency(state) {
 // show, so the first picture is rig-clean without decoding the whole cast.
 export function primeResidency(state) {
   const { load } = bands(state);
+  const cast = [...state.npcs, ...state.remotes.values()];
   return Promise.all([
-    ...state.npcs.map((n) => loadRigFar(n.id)),
-    ...state.npcs.filter((n) => inside(n, load)).map((n) => loadRigNear(n.id))
+    ...cast.map((n) => loadRigFar(artOf(n))),
+    ...cast.filter((n) => inside(n, load)).map((n) => loadRigNear(artOf(n)))
   ]);
 }

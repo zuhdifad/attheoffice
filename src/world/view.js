@@ -1,14 +1,14 @@
-import { TILE, CHAR_H, BUFFER_W, BUFFER_H, VIEWS } from '../core/config.js?v=24';
-import { atlasFor } from '../art/tiles.js?v=24';
-import { blitPropLayer } from '../art/props.js?v=24';
-import { shadowFor } from '../art/shadows.js?v=24';
-import { PAL } from '../art/palette.js?v=24';
-import { actorFor, drawActor } from '../art/rig.js?v=24';
-import { text, px } from '../core/draw.js?v=24';
-import { drawGround } from './ground.js?v=24';
-import { drawLight, drawGrade, drawTimeOfDay } from './lighting.js?v=24';
-import { drawFx } from './fx.js?v=24';
-import { now } from '../ui/wallclock.js?v=24';
+import { TILE, CHAR_H, BUFFER_W, BUFFER_H, VIEWS } from '../core/config.js?v=26';
+import { atlasFor } from '../art/tiles.js?v=26';
+import { blitPropLayer } from '../art/props.js?v=26';
+import { shadowFor } from '../art/shadows.js?v=26';
+import { PAL } from '../art/palette.js?v=26';
+import { actorFor, drawActor } from '../art/rig.js?v=26';
+import { text, px } from '../core/draw.js?v=26';
+import { drawGround } from './ground.js?v=26';
+import { drawLight, drawGrade, drawTimeOfDay } from './lighting.js?v=26';
+import { drawFx } from './fx.js?v=26';
+import { now } from '../ui/wallclock.js?v=26';
 
 const LIFT = CHAR_H - TILE;
 // A sitter is drawn at floor level in a seated anim — the chair track carries
@@ -124,9 +124,12 @@ export function drawWorld(g, state) {
     }
   }
 
-  // Contact shadows go down before anything stands on them.
+  // Contact shadows go down before anything stands on them. The people are the
+  // guard plus every live colleague off the wire — one y-sorted pass draws them
+  // all, because a remote is shaped exactly like an NPC.
   const people = [];
-  for (const n of npcs) {
+  const cast = [...npcs, ...state.remotes.values()];
+  for (const n of cast) {
     if (n.px / TILE < x0 - 2 || n.px / TILE > x0 + cols + 2) continue;
     if (n.py / TILE < y0 - 2 || n.py / TILE > y0 + rows + 2) continue;
     people.push(n);
@@ -179,8 +182,25 @@ export function drawWorld(g, state) {
   drawLight(g, { map, cam: rcam, cols, rows });
 
   // Anything that talks to the player sits above the light pass but still in
-  // world space, so it tracks the sprite it belongs to.
-  for (const n of people) if (n.say > 0) bubble(g, n, rcam, viewW, ppu);
+  // world space, so it tracks the sprite it belongs to — your own chat lines
+  // say themselves over your head the same way a colleague's do. Two speakers
+  // side by side share the air in lanes: the later bubble rides higher and
+  // keeps a stem down to its own head, so a wave and a greeting never
+  // overwrite each other.
+  const talkers = people.filter((n) => n.say > 0);
+  if (player.say > 0) talkers.push(player);
+  talkers.sort((a, b) => a.px - b.px);
+  const lanes = [];
+  g.font = '7px ui-monospace, Menlo, monospace';
+  for (const n of talkers) {
+    const w = Math.min(150, Math.ceil(g.measureText(n.line).width) + 10);
+    const dx = snap(n.px - rcam.x, ppu) + TILE / 2;
+    const x = Math.max(2, Math.min(viewW - w - 2, dx - w / 2));
+    let lane = 0;
+    while (lanes.some((b) => b.lane === lane && x < b.x + b.w + 2 && b.x < x + w + 2)) lane++;
+    lanes.push({ x, w, lane });
+    bubble(g, n, rcam, viewW, ppu, lane);
+  }
   drawNameTags(g, state, rcam, people, ppu);
 
   g.restore();
@@ -216,17 +236,20 @@ function heroRing(g, state, dx, dy, one) {
   g.restore();
 }
 
-function bubble(g, n, cam, viewW, ppu) {
+function bubble(g, n, cam, viewW, ppu, lane = 0) {
   const dx = snap(n.px - cam.x, ppu) + TILE / 2;
   const dy = snap(n.py - cam.y, ppu) - LIFT - 4;
   g.font = '7px ui-monospace, Menlo, monospace';
   const w = Math.min(150, Math.ceil(g.measureText(n.line).width) + 10);
   const x = Math.max(2, Math.min(viewW - w - 2, dx - w / 2));
-  const y = Math.max(14, dy - 14);
+  const y = Math.max(14, dy - 14 - lane * 16);
   const fade = Math.min(1, n.say / 30);
 
   g.save();
   g.globalAlpha = fade * 0.94;
+  // A lifted bubble keeps a hairline stem to its speaker, so the lane above
+  // still reads as belonging to the head below it.
+  if (lane > 0) px(g, dx - 0.5, y + 17, 1, dy + 3 - (y + 17), 'rgba(243,241,236,0.7)');
   px(g, x, y, w, 13, 'rgba(243,241,236,0.94)');
   px(g, x, y + 12, w, 1, 'rgba(20,23,31,0.30)');
   g.fillStyle = 'rgba(243,241,236,0.94)';

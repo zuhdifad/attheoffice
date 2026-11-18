@@ -1,5 +1,5 @@
-import { TILE } from '../core/config.js?v=24';
-import { propFor } from '../art/props.js?v=24';
+import { TILE } from '../core/config.js?v=26';
+import { propFor } from '../art/props.js?v=26';
 
 // The tile a sitter boards from, per facing: behind the chair, so stepping
 // onto the seat is one tile forward into the facing the prop owns.

@@ -1,6 +1,6 @@
-import { SCREEN_W } from '../core/config.js?v=24';
-import { text, px } from '../core/draw.js?v=24';
-import { now, weekday } from './wallclock.js?v=24';
+import { SCREEN_W, SCREEN_H } from '../core/config.js?v=26';
+import { text, px } from '../core/draw.js?v=26';
+import { now, weekday } from './wallclock.js?v=26';
 
 // The only thing the room wears is the handheld's parchment clock, top-right:
 // the calendar day and weekday over a 12-hour AM/PM time, all of it the device's
@@ -71,4 +71,56 @@ export function drawHud(g, state) {
   px(g, cx + 2, cy + 1, cw - 4, 1, PARCH_HI);
   px(g, cx + 5, cy + 4, 5, 5, out ? AMBER : GREEN);
   text(g, out ? 'CLOCKED-OUT' : 'CLOCKED-IN', cx + 13, cy + 9, INK, 'left', 6);
+
+  if (!state || !state.player) return;
+
+  // The badge's chair and the live roster, stacked under the clocked-in chip:
+  // which seat is yours, and how many people are on the floor with you.
+  let sy = cy + ch + 3;
+  if (state.seatNum) {
+    px(g, cx + 1, sy + 1, cw, ch, 'rgba(10,10,6,0.28)');
+    roundRect(g, cx, sy, cw, ch, 3);
+    g.fillStyle = PARCH;
+    g.fill();
+    g.lineWidth = 1;
+    g.strokeStyle = BORDER;
+    g.stroke();
+    px(g, cx + 2, sy + 1, cw - 4, 1, PARCH_HI);
+    px(g, cx + 5, sy + 4, 5, 5, AMBER);
+    text(g, `SEAT ${TWO(state.seatNum)}`, cx + 13, sy + 9, INK, 'left', 6);
+    sy += ch + 3;
+  }
+
+  const online = 1 + (state.remotes ? state.remotes.size : 0);
+  px(g, cx + 1, sy + 1, cw, ch, 'rgba(10,10,6,0.28)');
+  roundRect(g, cx, sy, cw, ch, 3);
+  g.fillStyle = PARCH;
+  g.fill();
+  g.lineWidth = 1;
+  g.strokeStyle = BORDER;
+  g.stroke();
+  px(g, cx + 2, sy + 1, cw - 4, 1, PARCH_HI);
+  px(g, cx + 5, sy + 4, 5, 5, GREEN);
+  text(g, `${online} ONLINE`, cx + 13, sy + 9, INK, 'left', 6);
+
+  // A quiet guidance chip at the foot of the picture while the floor is
+  // steering you to your chair — or telling you the chair is now yours.
+  if (state.hint && state.hint.t > 0) {
+    const fade = Math.min(1, state.hint.t / 40);
+    g.save();
+    g.globalAlpha = fade;
+    g.font = '7px ui-monospace, Menlo, monospace';
+    const tw = Math.ceil(g.measureText(state.hint.text).width) + 16;
+    const hx = Math.round(SCREEN_W / 2 - tw / 2);
+    const hy = SCREEN_H - 18;
+    px(g, hx + 1, hy + 1, tw, 12, 'rgba(10,10,6,0.35)');
+    roundRect(g, hx, hy, tw, 12, 3);
+    g.fillStyle = PARCH;
+    g.fill();
+    g.lineWidth = 1;
+    g.strokeStyle = BORDER;
+    g.stroke();
+    text(g, state.hint.text, SCREEN_W / 2, hy + 9, INK, 'center', 6);
+    g.restore();
+  }
 }

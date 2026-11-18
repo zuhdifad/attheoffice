@@ -7,10 +7,10 @@
 // The overlays keep animating (tears fall, Zzz rises) off the sim tick, so a
 // screenshot at any moment shows the sprites mid-life.
 
-import { FRAME_MS } from '../core/config.js?v=24';
-import { state } from '../core/state.js?v=24';
-import { applyZoom } from '../core/display.js?v=24';
-import { drawContactSheet, EXPRESSION, FACE_SHEET, OVERLAYS, SKINS } from '../art/expressions.js?v=24';
+import { FRAME_MS } from '../core/config.js?v=26';
+import { state } from '../core/state.js?v=26';
+import { applyZoom } from '../core/display.js?v=26';
+import { drawContactSheet, EXPRESSION, FACE_SHEET, OVERLAYS, SKINS } from '../art/expressions.js?v=26';
 
 export async function open() {
   state.mode = 'faces';

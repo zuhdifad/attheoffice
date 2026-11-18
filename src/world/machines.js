@@ -1,4 +1,4 @@
-import { steam } from './fx.js?v=24';
+import { steam } from './fx.js?v=26';
 
 // The room's small machines: the coffee bar's brew cycle, the printer's paper
 // feed and the phone booths' door. Each one is a state machine living on the
@@ -120,10 +120,10 @@ export function doorPassable(map, x, y) {
 
 export function updateMachines(state) {
   const { map, player } = state;
-  // Everyone the machines can see: the player and the whole crowd. A tile is
-  // asked for by a body on it or stepping into it, so a door opens ahead of
-  // the stride that will cross it.
-  const walkers = [player, ...(state.npcs || [])];
+  // Everyone the machines can see: the player, the guard and every live
+  // colleague. A tile is asked for by a body on it or stepping into it, so a
+  // door opens ahead of the stride that will cross it — on every client.
+  const walkers = [player, ...(state.npcs || []), ...(state.remotes ? state.remotes.values() : [])];
   const on = (e, x, y) =>
     (e.tx === x && e.ty === y) ||
     (e.moving && e.to && e.to.x === x && e.to.y === y);

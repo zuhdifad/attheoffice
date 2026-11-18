@@ -1,10 +1,10 @@
-import { TILE } from '../core/config.js?v=24';
-import { canvas } from '../core/draw.js?v=24';
-import { blitCell, atlasPages } from '../art/tiles.js?v=24';
-import { PAL } from '../art/palette.js?v=24';
-import { paintShadow, primeShadows, SHELL } from '../art/shadows.js?v=24';
-import { primeGlazing } from '../art/props.js?v=24';
-import { primeLights } from './lighting.js?v=24';
+import { TILE } from '../core/config.js?v=26';
+import { canvas } from '../core/draw.js?v=26';
+import { blitCell, atlasPages } from '../art/tiles.js?v=26';
+import { PAL } from '../art/palette.js?v=26';
+import { paintShadow, primeShadows, SHELL } from '../art/shadows.js?v=26';
+import { primeGlazing } from '../art/props.js?v=26';
+import { primeLights } from './lighting.js?v=26';
 
 // The static ground — slab, baked joint, zone inlay and the ambient occlusion
 // at the foot of every solid footprint — is laid once into 8x8-tile chunk

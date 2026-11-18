@@ -1,7 +1,7 @@
-import { TILE, ATLAS_COLS } from '../core/config.js?v=24';
-import { canvas } from '../core/draw.js?v=24';
-import { mulberry32 } from '../core/rng.js?v=24';
-import { PAL } from './palette.js?v=24';
+import { TILE, ATLAS_COLS } from '../core/config.js?v=26';
+import { canvas } from '../core/draw.js?v=26';
+import { mulberry32 } from '../core/rng.js?v=26';
+import { PAL } from './palette.js?v=26';
 
 // A prop is a piece of furniture with a footprint and one or more layers. The
 // footprint is what it costs the floor: a desk is three tiles wide and two deep,

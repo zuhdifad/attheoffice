@@ -1,6 +1,6 @@
-import { TILE } from '../core/config.js?v=24';
-import { canvas } from '../core/draw.js?v=24';
-import { PROPS } from './props.js?v=24';
+import { TILE } from '../core/config.js?v=26';
+import { canvas } from '../core/draw.js?v=26';
+import { PROPS } from './props.js?v=26';
 
 // Every solid prop carries one baked shadow: a soft contact pool at its feet
 // and a directional cast thrown to the south-east, the way the north glazing

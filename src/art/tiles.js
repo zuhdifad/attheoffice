@@ -1,7 +1,7 @@
-import { ATLAS_COLS, ATLAS_CELL_TILES, ATLAS_LODS, TILE } from '../core/config.js?v=24';
-import { canvas } from '../core/draw.js?v=24';
-import { mulberry32 } from '../core/rng.js?v=24';
-import { PAL } from './palette.js?v=24';
+import { ATLAS_COLS, ATLAS_CELL_TILES, ATLAS_LODS, TILE } from '../core/config.js?v=26';
+import { canvas } from '../core/draw.js?v=26';
+import { mulberry32 } from '../core/rng.js?v=26';
+import { PAL } from './palette.js?v=26';
 
 // The plate is the floor and nothing else now. Furniture is a prop with a
 // footprint and layers (art/props.js); a glyph here only names the ground a

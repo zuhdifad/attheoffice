@@ -1,5 +1,5 @@
-import { CHARACTERS } from '../art/palette.js?v=24';
-import { sfx } from '../core/audio.js?v=24';
+import { CHARACTERS } from '../art/palette.js?v=26';
+import { sfx } from '../core/audio.js?v=26';
 
 // The picker shows one colleague at a time, full length, in a studio tinted
 // with their own colour. The arrows — or ← → — walk the floor, and the one

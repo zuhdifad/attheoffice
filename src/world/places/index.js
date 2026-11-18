@@ -1,4 +1,4 @@
-import { office } from './office.js?v=24';
+import { office } from './office.js?v=26';
 
 // Every room the game can load. Each entry is a zero-argument builder returning
 // { name, w, h, grid, spawn }, so rooms never share mutable state.

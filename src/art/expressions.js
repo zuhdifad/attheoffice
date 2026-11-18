@@ -27,9 +27,9 @@
 // ?faces=1 draws the contact sheet: every expression on every skin tone,
 // through this same drawFace, so the sheet proves the production face path.
 
-import { CHAR_W } from '../core/config.js?v=24';
-import { canvas, px } from '../core/draw.js?v=24';
-import { CHARACTERS } from './palette.js?v=24';
+import { CHAR_W } from '../core/config.js?v=26';
+import { canvas, px } from '../core/draw.js?v=26';
+import { CHARACTERS } from './palette.js?v=26';
 
 export const FACE_BOX = 64;      // authored px per feature layer
 export const OVERLAY_BOX = 24;   // authored px per overlay sprite

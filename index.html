@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- ?v= is a cache key: bump it when the sheet or the modules change, or the
        browser will happily keep serving the copy it already has. -->
-  <link rel="stylesheet" href="style.css?v=24" />
+  <link rel="stylesheet" href="style.css?v=26" />
 </head>
 <body>
 
@@ -72,21 +72,25 @@
       <section class="enlist-stage" id="stageWhere">
         <h2>Where do you work?</h2>
         <div class="floor-pick" id="floorPick" role="group" aria-label="Level">
-          <button class="floor-btn" data-floor="Level 6" type="button">
+          <button class="floor-btn is-locked" data-floor="Level 6" type="button" disabled aria-disabled="true">
             <span class="floor-key" aria-hidden="true">1</span><b>Level 6</b>
+            <span class="floor-soon">Soon</span>
           </button>
           <button class="floor-btn" data-floor="Level 22" type="button">
             <span class="floor-key" aria-hidden="true">2</span><b>Level 22</b>
+            <span class="floor-live"><i></i>Live</span>
           </button>
-          <button class="floor-btn" data-floor="Level 7" type="button">
+          <button class="floor-btn is-locked" data-floor="Level 7" type="button" disabled aria-disabled="true">
             <span class="floor-key" aria-hidden="true">3</span><b>Level 7</b>
+            <span class="floor-soon">Soon</span>
           </button>
         </div>
+        <p class="enlist-err" id="whereError" role="alert"></p>
         <button id="whereBack" class="back-link" type="button">← Back</button>
       </section>
 
       <section class="enlist-stage" id="stageSeat">
-        <h2>Pick a seat</h2>
+        <h2>Pick your seat</h2>
         <div id="seatPick" class="seat-pick" role="group" aria-label="Seat"></div>
         <button id="seatBack" class="back-link" type="button">← Back</button>
       </section>
@@ -147,6 +151,34 @@
         <span class="zoom-label">Zoom out</span>
       </button>
 
+      <!-- The floor chat: BBM/YM for the room itself. T opens it, the pill
+           toggles it, and the badge counts what arrived while it was shut. -->
+      <button id="chatBtn" class="btn btn-ghost chat-btn" type="button" aria-label="Open floor chat" hidden>
+        <span class="chat-icon" aria-hidden="true">💬</span>
+        <span class="chat-label">Chat</span>
+        <span id="chatBadge" class="chat-badge" hidden>0</span>
+      </button>
+
+      <div id="chatDock" class="chat-dock" hidden>
+        <div class="chat-head">
+          <b>Floor chat</b>
+          <span id="chatOnline" class="chat-online"><i></i>1 online</span>
+          <button id="chatClose" class="chat-close" type="button" aria-label="Close chat">×</button>
+        </div>
+        <div id="chatLog" class="chat-log" role="log" aria-live="polite" aria-label="Floor chat messages"></div>
+        <div class="chat-emotes">
+          <button id="waveBtn" class="chat-emote" type="button">👋 Wave</button>
+          <button id="nudgeBtn" class="chat-emote" type="button">👉 Nudge</button>
+          <span class="chat-hint">T to open · Esc to close</span>
+        </div>
+        <form id="chatForm" class="chat-form" autocomplete="off">
+          <input id="chatInput" class="chat-input" type="text" maxlength="120"
+                 placeholder="Say something to the floor…" autocomplete="off" spellcheck="false"
+                 aria-label="Chat message" />
+          <button class="btn btn-primary chat-send" type="submit">Send</button>
+        </form>
+      </div>
+
       <div id="touchPad" class="touch-pad">
         <button class="pad up" data-dir="up" type="button" aria-label="Walk up">▲</button>
         <button class="pad left" data-dir="left" type="button" aria-label="Walk left">◀</button>
@@ -171,6 +203,6 @@
     </div>
   </div>
 
-  <script type="module" src="./src/main.js?v=24"></script>
+  <script type="module" src="./src/main.js?v=26"></script>
 </body>
 </html>

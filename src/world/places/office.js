@@ -4,16 +4,18 @@
 // a glazed manager office east, and a south band holding reception, the lounge,
 // the pantry and the print alcove — every zone reached off a two-tile aisle.
 //
-// A place is { name, w, h, grid, accents, props, spawn, stations }: the grid
-// names the slab under every tile, `accents` names the one inlay colour a zone
-// carries (laid as a transition strip where two zones meet), and `props` lists
-// the furniture with the footprint it occupies. Collision is derived from those
+// A place is { name, w, h, grid, accents, props, spawn }: the grid names the
+// slab under every tile, `accents` names the one inlay colour a zone carries
+// (laid as a transition strip where two zones meet), and `props` lists the
+// furniture with the footprint it occupies. Collision is derived from those
 // footprints by world/map.js, so a desk three tiles wide blocks exactly three
-// tiles and the walk keeps to the aisle.
+// tiles and the walk keeps to the aisle. The floor carries exactly 32 seats.
 
 const W = 30;
 const H = 28;
-const SPAWN = { x: 3, y: 25 };
+// Clock-in lands on the entrance mat, one tile in front of the door leaf, so
+// the first frame is the doorway itself and the guard beside it.
+const SPAWN = { x: 3, y: 26 };
 
 // Desk banks: four 3x2 benches each, two columns by two rows, with x5..6 and
 // y4..5 (y14..15 in bank B) left as the two-tile aisles between them.
@@ -67,7 +69,7 @@ function ground() {
 
 function furniture() {
   const p = [];
-  const add = (kind, x, y) => p.push({ kind, x, y });
+  const add = (kind, x, y, face) => p.push(face ? { kind, x, y, face } : { kind, x, y });
 
   // ---- shell --------------------------------------------------------------
   for (let x = 0; x < W; x++) {
@@ -167,12 +169,20 @@ function furniture() {
   add('highTable', 20, 23);
   add('stool', 20, 24);
   add('stool', 21, 24);
+  // The north side of the high table seats two more, facing down onto it —
+  // the pantry's full complement is four stools around one table.
+  add('stool', 20, 22, 'down');
+  add('stool', 21, 22, 'down');
   add('noticeBoard', 29, 22);
 
   // ---- lounge -------------------------------------------------------------------
   add('rug', 11, 23);
   add('sofa', 11, 25);
   add('armchair', 14, 24);
+  // Two more armchairs flank the rug, so the lounge reads as a conversation
+  // pit: sofa south, three chairs around the low table.
+  add('armchair', 10, 24);
+  add('armchair', 15, 24);
   add('lowTable', 12, 23);
   add('magazines', 12, 23);
   add('plant', 10, 22);
@@ -210,18 +220,6 @@ function furniture() {
 
 export function office() {
   const { grid, accents } = ground();
-  // Each station is a walkable tile beside the prop it belongs to, so the
-  // objective always points at somewhere the player can actually stand.
-  const stations = [
-    { id: 'inbox', x: 5, y: 3, label: 'Clear the inbox', hint: 'Bank A, left desk', verb: 'Working', points: 120 },
-    { id: 'standup', x: 20, y: 4, label: 'Run the stand-up', hint: 'Meeting table', verb: 'Briefing', points: 140 },
-    { id: 'call', x: 15, y: 10, label: 'Take the client call', hint: 'Phone booth, east corridor', verb: 'On a call', points: 160 },
-    { id: 'coffee', x: 19, y: 25, label: 'Refill the coffee', hint: 'Coffee bar, pantry', verb: 'Brewing', points: 100 },
-    { id: 'review', x: 24, y: 1, label: 'Present the sprint review', hint: 'Whiteboard, meeting room', verb: 'Presenting', points: 200 },
-    { id: 'print', x: 26, y: 24, label: 'Print the report', hint: 'Print alcove', verb: 'Printing', points: 130 },
-    { id: 'out', x: 3, y: 26, label: 'Clock out', hint: 'Entrance mat', verb: 'Clocking out', points: 250 }
-  ];
-
   return {
     name: 'office',
     w: W,
@@ -229,7 +227,6 @@ export function office() {
     grid,
     accents,
     props: furniture(),
-    spawn: SPAWN,
-    stations
+    spawn: SPAWN
   };
 }
